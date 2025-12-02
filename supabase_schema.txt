@@ -1,0 +1,176 @@
+-- 1. Criação dos Tipos (Enums)
+CREATE TYPE public.user_role AS ENUM ('member', 'admin');
+CREATE TYPE public.user_status AS ENUM ('PENDING', 'ACTIVE', 'BLOCKED');
+CREATE TYPE public.resource_type AS ENUM ('pdf', 'sheet', 'audio', 'video', 'link', 'community');
+
+-- 2. Tabela de Perfis (Profiles) - Extensão da tabela auth.users
+CREATE TABLE public.profiles (
+  id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL PRIMARY KEY,
+  email TEXT,
+  full_name TEXT,
+  avatar_url TEXT,
+  role public.user_role DEFAULT 'member'::public.user_role,
+  status public.user_status DEFAULT 'PENDING'::public.user_status,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ativar RLS em profiles
+ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso para profiles
+CREATE POLICY "Dados públicos de perfis são visíveis por todos" ON public.profiles
+  FOR SELECT USING (true);
+
+CREATE POLICY "Usuários podem atualizar seus próprios perfis" ON public.profiles
+  FOR UPDATE USING (auth.uid() = id);
+
+-- 3. Tabela de Desafios (Challenges)
+CREATE TABLE public.challenges (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  day_number INTEGER NOT NULL UNIQUE,
+  title TEXT NOT NULL,
+  description TEXT,
+  morning_message TEXT,
+  fire_concept TEXT,
+  expected_result TEXT,
+  reflection_prompt TEXT,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ativar RLS em challenges
+ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso para challenges
+CREATE POLICY "Desafios são visíveis para todos os usuários autenticados" ON public.challenges
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Apenas admins podem inserir/atualizar/deletar desafios" ON public.challenges
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- 4. Tabela de Tarefas (Challenge Tasks)
+CREATE TABLE public.challenge_tasks (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  day_id UUID REFERENCES public.challenges(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  order_index INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ativar RLS em challenge_tasks
+ALTER TABLE public.challenge_tasks ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso para tasks
+CREATE POLICY "Tarefas visíveis para autenticados" ON public.challenge_tasks
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admins gerenciam tarefas" ON public.challenge_tasks
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- 5. Tabela de Recursos (Challenge Resources)
+CREATE TABLE public.challenge_resources (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  day_id UUID REFERENCES public.challenges(id) ON DELETE CASCADE NOT NULL,
+  title TEXT NOT NULL,
+  url TEXT NOT NULL,
+  type public.resource_type DEFAULT 'link'::public.resource_type,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- Ativar RLS em challenge_resources
+ALTER TABLE public.challenge_resources ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso para resources
+CREATE POLICY "Recursos visíveis para autenticados" ON public.challenge_resources
+  FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Admins gerenciam recursos" ON public.challenge_resources
+  FOR ALL TO authenticated USING (
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+-- 6. Tabela de Progresso do Usuário (User Progress)
+CREATE TABLE public.user_progress (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  task_id UUID REFERENCES public.challenge_tasks(id) ON DELETE CASCADE NOT NULL,
+  completed_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(user_id, task_id)
+);
+
+-- Ativar RLS em user_progress
+ALTER TABLE public.user_progress ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso para user_progress
+CREATE POLICY "Usuários veem seu próprio progresso" ON public.user_progress
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Usuários marcam seu próprio progresso" ON public.user_progress
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Usuários desmarcam seu próprio progresso" ON public.user_progress
+  FOR DELETE USING (auth.uid() = user_id);
+
+-- 7. Tabela de Notas do Usuário (User Notes/Reflexões)
+CREATE TABLE public.user_notes (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE NOT NULL,
+  day_id UUID REFERENCES public.challenges(id) ON DELETE CASCADE NOT NULL,
+  content TEXT,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  UNIQUE(user_id, day_id)
+);
+
+-- Ativar RLS em user_notes
+ALTER TABLE public.user_notes ENABLE ROW LEVEL SECURITY;
+
+-- Políticas de acesso para user_notes
+CREATE POLICY "Usuários gerenciam suas próprias notas" ON public.user_notes
+  FOR ALL USING (auth.uid() = user_id);
+
+-- 8. Automação: Criar Perfil ao Cadastrar (Trigger)
+CREATE OR REPLACE FUNCTION public.handle_new_user()
+RETURNS trigger AS $$
+BEGIN
+  INSERT INTO public.profiles (id, email, full_name, avatar_url)
+  VALUES (new.id, new.email, new.raw_user_meta_data->>'full_name', new.raw_user_meta_data->>'avatar_url');
+  RETURN new;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+CREATE OR REPLACE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE PROCEDURE public.handle_new_user();
+
+-- 9. Storage (Configuração do Bucket para Uploads)
+-- Nota: Você precisa criar um bucket chamado 'challenges_assets' no menu Storage do Supabase se ele não for criado automaticamente pelo script abaixo (algumas versões do Supabase não permitem criar buckets via SQL diretamente, mas as policies funcionam).
+
+INSERT INTO storage.buckets (id, name, public) 
+VALUES ('challenges_assets', 'challenges_assets', true)
+ON CONFLICT (id) DO NOTHING;
+
+-- Políticas de Storage
+CREATE POLICY "Arquivos são públicos para leitura" ON storage.objects
+  FOR SELECT USING ( bucket_id = 'challenges_assets' );
+
+CREATE POLICY "Apenas Admins podem fazer upload" ON storage.objects
+  FOR INSERT TO authenticated WITH CHECK (
+    bucket_id = 'challenges_assets' AND 
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Apenas Admins podem atualizar/deletar arquivos" ON storage.objects
+  FOR UPDATE TO authenticated USING (
+    bucket_id = 'challenges_assets' AND 
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );
+
+CREATE POLICY "Admins delete" ON storage.objects
+  FOR DELETE TO authenticated USING (
+    bucket_id = 'challenges_assets' AND 
+    EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'admin')
+  );

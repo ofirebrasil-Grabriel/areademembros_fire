@@ -1,11 +1,30 @@
-<div align="center">
+# Desafio FIRE 15 Dias
 
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
+## Configuração do Banco de Dados (Supabase)
 
-  <h1>Built with AI Studio</h2>
+Para que o aplicativo funcione com as credenciais inseridas, você deve criar a estrutura do banco de dados.
 
-  <p>The fastest path from prompt to production with Gemini.</p>
+1.  Acesse o Painel do seu projeto no Supabase.
+2.  No menu lateral, clique em **SQL Editor**.
+3.  Clique em **New Query**.
+4.  Copie todo o conteúdo do arquivo `db/schema.sql` deste projeto.
+5.  Cole no editor do Supabase e clique em **RUN**.
 
-  <a href="https://aistudio.google.com/apps">Start building</a>
+Isso criará:
+*   Tabelas de usuários, desafios, tarefas e progresso.
+*   Políticas de segurança (quem pode ver o quê).
+*   Gatilhos (Triggers) para criar perfil automaticamente ao se cadastrar.
 
-</div>
+## Acesso Admin
+
+O sistema possui um acesso de demonstração local e suporte a acesso real via banco de dados.
+
+### Acesso Demo (Sem banco de dados)
+*   **Email:** `admin@ofire.com.br`
+*   **Senha:** `admin`
+
+### Acesso Real (Com banco de dados)
+1.  Cadastre-se normalmente na tela de login.
+2.  Vá no painel do Supabase -> Table Editor -> `profiles`.
+3.  Encontre seu usuário e mude a coluna `role` para `admin`.
+4.  Faça login novamente ou recarregue a página.
