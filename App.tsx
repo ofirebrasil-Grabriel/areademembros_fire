@@ -34,12 +34,18 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Safety timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      setLoading(false);
+    }, 5000); // 5 seconds max loading time
+
     // 1. Check for Demo Session first (for quick testing without backend)
     const demoSession = localStorage.getItem('fire_demo_session');
     if (demoSession) {
       try {
         setSession(JSON.parse(demoSession));
         setLoading(false);
+        clearTimeout(timeoutId);
         return;
       } catch (e) {
         console.error("Failed to parse demo session", e);
@@ -53,6 +59,11 @@ const App: React.FC = () => {
         setSession(session);
       }
       setLoading(false);
+      clearTimeout(timeoutId);
+    }).catch(err => {
+      console.error("Supabase session error:", err);
+      setLoading(false);
+      clearTimeout(timeoutId);
     });
 
     // 3. Listen for auth changes
@@ -63,15 +74,18 @@ const App: React.FC = () => {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   if (loading) return <LoadingScreen />;
 
   // Helper to check if logged in user is admin
-  const isAdmin = session?.user?.email === 'admin@ofire.com.br' || 
-                  session?.user?.app_metadata?.role === 'admin' ||
-                  session?.user?.user_metadata?.role === 'admin';
+  const isAdmin = session?.user?.email === 'admin@ofire.com.br' ||
+    session?.user?.app_metadata?.role === 'admin' ||
+    session?.user?.user_metadata?.role === 'admin';
 
   return (
     <Router>
@@ -80,7 +94,7 @@ const App: React.FC = () => {
         <Route path="/login" element={
           !session ? <Login /> : (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/" />)
         } />
-        
+
         {/* Protected Member Routes */}
         <Route path="/" element={session ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
         <Route path="/day/:id" element={session ? <Layout><DayView /></Layout> : <Navigate to="/login" />} />
@@ -89,7 +103,7 @@ const App: React.FC = () => {
         <Route path="/community" element={session ? <Layout><Community /></Layout> : <Navigate to="/login" />} />
         <Route path="/achievements" element={session ? <Layout><Achievements /></Layout> : <Navigate to="/login" />} />
         <Route path="/day/current" element={session ? <Layout><CurrentDayRedirect /></Layout> : <Navigate to="/login" />} />
-        
+
         {/* Admin Routes */}
         <Route path="/admin" element={session ? <Layout isAdmin><AdminDashboard /></Layout> : <Navigate to="/login" />} />
         <Route path="/admin/settings" element={session ? <Layout isAdmin><AdminSettings /></Layout> : <Navigate to="/login" />} />
