@@ -86,7 +86,7 @@ export const AdminSettings: React.FC = () => {
           Integração Hotmart
         </h2>
         <p className="text-fire-gray mb-4 text-sm">
-          Copie a URL abaixo e configure na plataforma da Hotmart em (Ferramentas > Webhooks) para liberar o acesso automaticamente.
+          Copie a URL abaixo e configure na plataforma da Hotmart em (Ferramentas {'>'} Webhooks) para liberar o acesso automaticamente.
         </p>
         <div className="flex gap-2">
           <input 
