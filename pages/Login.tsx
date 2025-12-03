@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
-import { FireLogo } from '../components/Logo';
 import { Button } from '../components/Button';
 import { Mail, Lock, Loader2 } from 'lucide-react';
 

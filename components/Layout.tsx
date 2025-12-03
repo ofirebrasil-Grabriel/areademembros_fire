@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { FireLogo } from './Logo';
 import { ForcePasswordChange } from './ForcePasswordChange';
 import { getCurrentUserProfile } from '../services/dataService';
 import {
