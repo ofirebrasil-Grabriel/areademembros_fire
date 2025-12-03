@@ -521,13 +521,18 @@ export const deleteStorageFile = async (fileName: string) => {
 export const getDashboardStats = async (): Promise<DashboardStats> => {
   try {
     // 1. Fetch Users Stats
-    const { data: profiles, error: profilesError } = await supabase.from('profiles').select('status');
+    const { data: profiles, error: profilesError } = await supabase.from('profiles').select('status, created_at');
 
     if (profilesError) throw profilesError;
 
     const totalMembers = profiles?.length || 0;
     const activeUsers = profiles?.filter(p => p.status === 'ACTIVE').length || 0;
     const blockedUsers = profiles?.filter(p => p.status === 'BLOCKED').length || 0;
+
+    // Calculate New Members (Last 30 Days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const newMembersLast30Days = profiles?.filter(p => new Date(p.created_at) >= thirtyDaysAgo).length || 0;
 
     // 2. Fetch Completion Stats
     const { count: totalTasksCount } = await supabase.from('challenge_tasks').select('*', { count: 'exact', head: true });
@@ -542,7 +547,8 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
       totalMembers,
       activeUsers,
       blockedUsers,
-      avgCompletion
+      avgCompletion,
+      newMembersLast30Days
     };
   } catch (error) {
     console.error("Error fetching dashboard stats:", error);
@@ -550,8 +556,53 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
       totalMembers: 0,
       activeUsers: 0,
       blockedUsers: 0,
-      avgCompletion: 0
+      avgCompletion: 0,
+      newMembersLast30Days: 0
     };
+  }
+};
+
+export const getEngagementStats = async () => {
+  try {
+    const fourteenDaysAgo = new Date();
+    fourteenDaysAgo.setDate(fourteenDaysAgo.getDate() - 14);
+
+    const { data, error } = await supabase
+      .from('user_progress')
+      .select('completed_at')
+      .gte('completed_at', fourteenDaysAgo.toISOString())
+      .order('completed_at', { ascending: true });
+
+    if (error) throw error;
+
+    // Group by date
+    const stats: Record<string, number> = {};
+    // Initialize last 14 days with 0
+    for (let i = 0; i < 14; i++) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      stats[d.toLocaleDateString('pt-BR')] = 0;
+    }
+
+    data?.forEach((item: any) => {
+      const date = new Date(item.completed_at).toLocaleDateString('pt-BR');
+      if (stats[date] !== undefined) {
+        stats[date]++;
+      }
+    });
+
+    // Convert to array sorted by date
+    return Object.entries(stats)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => {
+        const [dayA, monthA, yearA] = a.date.split('/').map(Number);
+        const [dayB, monthB, yearB] = b.date.split('/').map(Number);
+        return new Date(yearA, monthA - 1, dayA).getTime() - new Date(yearB, monthB - 1, dayB).getTime();
+      });
+
+  } catch (error) {
+    console.error("Error getting engagement stats:", error);
+    return [];
   }
 };
 

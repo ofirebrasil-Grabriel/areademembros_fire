@@ -103,6 +103,7 @@ export interface DashboardStats {
   activeUsers: number;
   blockedUsers: number;
   avgCompletion: number;
+  newMembersLast30Days?: number;
 }
 
 export interface StorageFile {

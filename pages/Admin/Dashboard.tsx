@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Users, DollarSign, Activity, TrendingUp, ArrowRight, Loader2, FileText, BarChart3, Clock, CheckCircle } from 'lucide-react';
-import { getDashboardStats, getRecentActivity } from '../../services/dataService';
+import { getDashboardStats, getRecentActivity, getEngagementStats } from '../../services/dataService';
 import { DashboardStats } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,15 +9,18 @@ export const AdminDashboard: React.FC = () => {
   const [activity, setActivity] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [engagementStats, setEngagementStats] = useState<{ date: string; count: number }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [statsData, activityData] = await Promise.all([
+      const [statsData, activityData, engagementData] = await Promise.all([
         getDashboardStats(),
-        getRecentActivity()
+        getRecentActivity(),
+        getEngagementStats()
       ]);
       setStats(statsData);
       setActivity(activityData);
+      setEngagementStats(engagementData);
       setLoading(false);
     };
     fetchData();
@@ -33,10 +36,13 @@ export const AdminDashboard: React.FC = () => {
 
   const cards = [
     { label: 'Membros Totais', value: stats.totalMembers, icon: Users, change: 'Total', color: 'text-blue-400', bg: 'bg-blue-400/10' },
-    { label: 'Receita (Estimada)', value: `R$ ${(stats.activeUsers * 297).toLocaleString()}`, icon: DollarSign, change: 'Est.', color: 'text-green-400', bg: 'bg-green-400/10' },
+    { label: 'Novos Membros (30d)', value: stats.newMembersLast30Days || 0, icon: TrendingUp, change: 'Crescimento', color: 'text-green-400', bg: 'bg-green-400/10' },
     { label: 'Usuários Ativos', value: stats.activeUsers, icon: Activity, change: `${Math.round((stats.activeUsers / stats.totalMembers || 0) * 100)}%`, color: 'text-fire-orange', bg: 'bg-fire-orange/10' },
-    { label: 'Conclusão Média', value: `${stats.avgCompletion}%`, icon: TrendingUp, change: 'Geral', color: 'text-purple-400', bg: 'bg-purple-400/10' },
+    { label: 'Conclusão Média', value: `${stats.avgCompletion}%`, icon: BarChart3, change: 'Geral', color: 'text-purple-400', bg: 'bg-purple-400/10' },
   ];
+
+  // Calculate max value for chart scaling
+  const maxEngagement = Math.max(...engagementStats.map(e => e.count), 5); // Minimum 5 for scale
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500 pb-12">
@@ -75,27 +81,28 @@ export const AdminDashboard: React.FC = () => {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white font-montserrat flex items-center gap-2">
               <BarChart3 className="text-fire-orange" size={20} />
-              Engajamento
+              Tarefas Concluídas (Últimos 14 dias)
             </h2>
           </div>
 
           <div className="h-64 flex items-end justify-between gap-3 px-2">
-            {[35, 45, 30, 60, 55, 75, 50, 65, 80, 70, 90, 85, 95, 80, 70].map((h, i) => (
-              <div key={i} className="w-full relative group">
-                <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-fire-dark text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  {h}%
+            {engagementStats.map((stat, i) => (
+              <div key={i} className="w-full relative group flex flex-col items-center gap-2">
+                <div className="absolute -top-8 bg-white text-fire-dark text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10 whitespace-nowrap">
+                  {stat.count} tarefas
                 </div>
                 <div
                   className="w-full bg-gradient-to-t from-fire-secondary to-fire-orange/50 rounded-t-sm hover:from-fire-orange hover:to-fire-orange transition-all duration-300 cursor-pointer"
-                  style={{ height: `${h}%` }}
+                  style={{ height: `${(stat.count / maxEngagement) * 100}%`, minHeight: '4px' }}
                 ></div>
+                <span className="text-[10px] text-fire-gray rotate-45 origin-left mt-2">{stat.date.slice(0, 5)}</span>
               </div>
             ))}
-          </div>
-          <div className="flex justify-between mt-4 text-xs text-fire-gray border-t border-white/5 pt-4">
-            <span>Início do Mês</span>
-            <span>Meio do Mês</span>
-            <span>Hoje</span>
+            {engagementStats.length === 0 && (
+              <div className="w-full h-full flex items-center justify-center text-fire-gray text-sm">
+                Sem dados de engajamento recentes.
+              </div>
+            )}
           </div>
         </div>
 
