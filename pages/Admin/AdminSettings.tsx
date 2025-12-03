@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, CheckCircle, Database, AlertTriangle, Loader2, Webhook, Link as LinkIcon, CreditCard } from 'lucide-react';
+import { Save, CheckCircle, Database, AlertTriangle, Loader2, Webhook, Link as LinkIcon, CreditCard, FileText } from 'lucide-react';
 import { Button } from '../../components/Button';
 import { seedDatabase } from '../../services/dataService';
 import { supabase } from '../../services/supabaseClient';
@@ -17,6 +17,9 @@ export const AdminSettings: React.FC = () => {
 
   const [seeding, setSeeding] = useState(false);
   const [seedResult, setSeedResult] = useState<{ success: boolean, message: string } | null>(null);
+
+  const [logs, setLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   useEffect(() => {
     fetchConfig();
@@ -40,7 +43,7 @@ export const AdminSettings: React.FC = () => {
         setSalesPageUrl(configMap['sales_page_url'] || '');
       }
     } catch (err) {
-      console.error("Error fetching config:", err);
+      // console.error("Error fetching config:", err);
     } finally {
       setLoadingConfig(false);
     }
@@ -77,6 +80,25 @@ export const AdminSettings: React.FC = () => {
 
     setSeeding(false);
     setSeedResult(result);
+    setSeeding(false);
+    setSeedResult(result);
+  };
+
+  const handleFetchLogs = async () => {
+    setLoadingLogs(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('admin-actions', {
+        body: { action: 'getWebhookLogs' }
+      });
+
+      if (error) throw error;
+      setLogs(data.logs || []);
+    } catch (err: any) {
+      console.error("Error fetching logs:", err);
+      alert("Erro ao buscar logs: " + err.message);
+    } finally {
+      setLoadingLogs(false);
+    }
   };
 
   if (loadingConfig) {
@@ -155,6 +177,31 @@ export const AdminSettings: React.FC = () => {
             </p>
           </div>
         </div>
+      </div>
+
+      {/* Webhook Logs */}
+      <div className="bg-fire-secondary/20 border border-white/5 rounded-2xl p-8">
+        <h2 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
+          <FileText className="text-fire-orange" />
+          Logs de Webhook (Debug)
+        </h2>
+
+        <div className="mb-4">
+          <Button onClick={handleFetchLogs} disabled={loadingLogs} variant="secondary">
+            {loadingLogs ? <Loader2 className="animate-spin mr-2" /> : <FileText className="mr-2" size={18} />}
+            Carregar Últimos Logs
+          </Button>
+        </div>
+
+        {logs.length > 0 ? (
+          <div className="bg-black/50 rounded-lg p-4 overflow-x-auto max-h-96 border border-white/10">
+            <pre className="text-xs text-green-400 font-mono whitespace-pre-wrap">
+              {JSON.stringify(logs, null, 2)}
+            </pre>
+          </div>
+        ) : (
+          <p className="text-fire-gray text-sm">Nenhum log encontrado ou ainda não carregado.</p>
+        )}
       </div>
 
       {/* Hotmart Integration (Desativada) - This section was originally for Hotmart but is now replaced by the new Hotmart Integration */}

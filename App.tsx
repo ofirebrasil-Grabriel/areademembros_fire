@@ -6,7 +6,7 @@ import { Session } from '@supabase/supabase-js';
 // Layouts & Pages
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
-import { Payment } from './pages/Payment';
+
 import { Dashboard } from './pages/Dashboard';
 import { DayView } from './pages/DayView';
 import { Profile } from './pages/Profile';
@@ -21,6 +21,7 @@ import { AdminUsers } from './pages/Admin/AdminUsers';
 import { AdminUserDetail } from './pages/Admin/AdminUserDetail';
 import { AdminLibrary } from './pages/Admin/AdminLibrary';
 import { CurrentDayRedirect } from './components/CurrentDayRedirect';
+import { ChangePassword } from './pages/ChangePassword';
 
 // Loading Component
 const LoadingScreen = () => (
@@ -33,25 +34,28 @@ const LoadingScreen = () => (
 const App: React.FC = () => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
-    // 1. Check for Demo Session first (for quick testing without backend)
-    const demoSession = localStorage.getItem('fire_demo_session');
-    if (demoSession) {
-      try {
-        setSession(JSON.parse(demoSession));
-        setLoading(false);
-        return;
-      } catch (e) {
-        console.error("Failed to parse demo session", e);
-        localStorage.removeItem('fire_demo_session');
-      }
-    }
+    const checkProfile = async (uid: string) => {
+      const { data } = await supabase
+        .from('profiles')
+        .select('must_change_password')
+        .eq('id', uid)
+        .single();
 
-    // 2. Check active Supabase session
+      if (data?.must_change_password) {
+        setMustChangePassword(true);
+      } else {
+        setMustChangePassword(false);
+      }
+    };
+
+    // 1. Check active Supabase session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setSession(session);
+        checkProfile(session.user.id);
       }
       setLoading(false);
     });
@@ -61,6 +65,9 @@ const App: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
+      if (session) {
+        checkProfile(session.user.id);
+      }
       setLoading(false);
     });
 
@@ -79,22 +86,26 @@ const App: React.FC = () => {
       <Routes>
         {/* Redirect Logic: If logged in as admin, go to /admin, else go to / */}
         <Route path="/login" element={
-          !session ? <Login /> : (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/" />)
+          !session ? <Login /> : (mustChangePassword ? <Navigate to="/change-password" /> : (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/" />))
         } />
 
-        <Route path="/payment" element={session ? <Payment /> : <Navigate to="/login" />} />
+        <Route path="/change-password" element={
+          session ? <ChangePassword /> : <Navigate to="/login" />
+        } />
+
+
 
         {/* Protected Member Routes */}
-        <Route path="/" element={session ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
-        <Route path="/day/:id" element={session ? <Layout><DayView /></Layout> : <Navigate to="/login" />} />
-        <Route path="/profile" element={session ? <Layout><Profile /></Layout> : <Navigate to="/login" />} />
-        <Route path="/library" element={session ? <Layout><Library /></Layout> : <Navigate to="/login" />} />
-        <Route path="/community" element={session ? <Layout><Community /></Layout> : <Navigate to="/login" />} />
-        <Route path="/achievements" element={session ? <Layout><Achievements /></Layout> : <Navigate to="/login" />} />
-        <Route path="/day/current" element={session ? <Layout><CurrentDayRedirect /></Layout> : <Navigate to="/login" />} />
+        <Route path="/" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Dashboard /></Layout>) : <Navigate to="/login" />} />
+        <Route path="/day/:id" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><DayView /></Layout>) : <Navigate to="/login" />} />
+        <Route path="/profile" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Profile /></Layout>) : <Navigate to="/login" />} />
+        <Route path="/library" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Library /></Layout>) : <Navigate to="/login" />} />
+        <Route path="/community" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Community /></Layout>) : <Navigate to="/login" />} />
+        <Route path="/achievements" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Achievements /></Layout>) : <Navigate to="/login" />} />
+        <Route path="/day/current" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><CurrentDayRedirect /></Layout>) : <Navigate to="/login" />} />
 
         {/* Admin Routes */}
-        <Route path="/admin" element={session ? <Layout isAdmin><AdminDashboard /></Layout> : <Navigate to="/login" />} />
+        <Route path="/admin" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout isAdmin><AdminDashboard /></Layout>) : <Navigate to="/login" />} />
         <Route path="/admin/settings" element={session ? <Layout isAdmin><AdminSettings /></Layout> : <Navigate to="/login" />} />
         <Route path="/admin/challenges" element={session ? <Layout isAdmin><AdminChallenges /></Layout> : <Navigate to="/login" />} />
         <Route path="/admin/challenges/new" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />

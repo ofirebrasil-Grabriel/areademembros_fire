@@ -18,7 +18,7 @@ const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiI
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 /**
- * NOTE: For the purpose of this demo without a real backend connection,
+
  * we will mostly rely on mock data in the service layers if the connection fails,
  * but the client is configured correctly for a real Self-Hosted Supabase instance.
  */

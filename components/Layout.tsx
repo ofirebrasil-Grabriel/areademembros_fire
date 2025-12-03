@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FireLogo } from './Logo';
+import { ForcePasswordChange } from './ForcePasswordChange';
+import { getCurrentUserProfile } from '../services/dataService';
 import {
   LogOut,
   LayoutDashboard,
@@ -22,45 +24,25 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+
+  useEffect(() => {
+    const checkPasswordStatus = async () => {
+      const profile = await getCurrentUserProfile();
+      if (profile?.must_change_password) {
+        setMustChangePassword(true);
+      }
+    };
+    checkPasswordStatus();
+  }, [location.pathname]);
 
   const handleLogout = async () => {
-    // Check if it's a demo session
-    if (localStorage.getItem('fire_demo_session')) {
-      localStorage.removeItem('fire_demo_session');
-      // Full reload to clear state in App.tsx
-      window.location.href = '/login';
-      window.location.reload();
-      return;
-    }
-
     // Standard supabase logout
-    await supabase.auth.signOut();
-    navigate('/login');
     await supabase.auth.signOut();
     navigate('/login');
   };
 
-  // Check Subscription Status
-  React.useEffect(() => {
-    const checkSubscription = async () => {
-      if (isAdmin) return; // Admins bypass
 
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('subscription_status')
-        .eq('id', user.id)
-        .single();
-
-      if (profile && profile.subscription_status !== 'active' && location.pathname !== '/payment') {
-        navigate('/payment');
-      }
-    };
-
-    checkSubscription();
-  }, [location.pathname, isAdmin, navigate]);
 
   const navItems = isAdmin ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -89,7 +71,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out
+        fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out
         bg-[#011627] border-r border-fire-secondary
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -98,7 +80,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
             <FireLogo />
           </div>
 
-          <nav className="flex-1 px-4 py-8 space-y-2">
+          <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path || (item.path !== '/' && item.path !== '/admin' && location.pathname.startsWith(item.path));
               return (
@@ -140,11 +122,16 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
       </main>
 
       {/* Overlay for mobile */}
-      {isSidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {
+        isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )
+      }
+      {mustChangePassword && (
+        <ForcePasswordChange onSuccess={() => setMustChangePassword(false)} />
       )}
     </div>
   );
