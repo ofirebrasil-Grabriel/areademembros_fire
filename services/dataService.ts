@@ -98,12 +98,13 @@ export const getDays = async (): Promise<ChallengeDay[]> => {
     .select(`
       *,
       tasks:challenge_tasks(*),
-      resources:challenge_resources(*)
+      resources:challenge_resources(*),
+      reflections:challenge_reflections(*)
     `)
-    .order('day_number');
+    .order('day_number', { ascending: true });
 
   if (error) {
-    console.error("Error fetching days:", error);
+    console.error('Error fetching days:', error);
     return [];
   }
 
@@ -115,7 +116,8 @@ export const getDays = async (): Promise<ChallengeDay[]> => {
   const sortedData = data.map((day: any) => ({
     ...day,
     tasks: day.tasks ? day.tasks.sort((a: any, b: any) => a.order_index - b.order_index) : [],
-    resources: day.resources || []
+    resources: day.resources || [],
+    reflections: day.reflections ? day.reflections.sort((a: any, b: any) => a.order_index - b.order_index) : []
   }));
 
   return sortedData as ChallengeDay[];
@@ -127,17 +129,22 @@ export const getDayByNumber = async (dayNumber: number): Promise<ChallengeDay | 
     .select(`
       *,
       tasks:challenge_tasks(*),
-      resources:challenge_resources(*)
+      resources:challenge_resources(*),
+      reflections:challenge_reflections(*)
     `)
     .eq('day_number', dayNumber)
     .single();
 
-  if (error || !data) return null;
+  if (error) {
+    console.error('Error fetching day:', error);
+    return null;
+  }
 
   return {
     ...data,
     tasks: data.tasks ? data.tasks.sort((a: any, b: any) => a.order_index - b.order_index) : [],
-    resources: data.resources || []
+    resources: data.resources || [],
+    reflections: data.reflections ? data.reflections.sort((a: any, b: any) => a.order_index - b.order_index) : []
   } as ChallengeDay;
 };
 

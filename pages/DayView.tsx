@@ -449,11 +449,23 @@ export const DayView: React.FC = () => {
             </h2>
             <div className="bg-gradient-to-br from-fire-secondary/20 to-fire-dark border border-white/10 rounded-2xl p-6 md:p-8">
               <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
-                <p className="text-lg text-white font-medium max-w-2xl">{day.reflection_prompt}</p>
+                <div className="space-y-3 w-full">
+                  {day.reflections && day.reflections.length > 0 ? (
+                    <ul className="space-y-2 list-disc list-inside text-lg text-white font-medium">
+                      {day.reflections.map((ref) => (
+                        <li key={ref.id} className="leading-relaxed">
+                          {ref.question}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-lg text-white font-medium max-w-2xl">{day.reflection_prompt}</p>
+                  )}
+                </div>
                 <button
                   onClick={handleSaveNote}
                   disabled={savingNote}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap shrink-0
                       ${noteSaved
                       ? 'bg-green-500/20 text-green-400'
                       : 'bg-white/5 text-fire-gray hover:bg-fire-orange/10 hover:text-fire-orange'}

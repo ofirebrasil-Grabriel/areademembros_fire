@@ -46,9 +46,10 @@ export interface ChallengeDay {
   fire_concept?: string;
   fire_audio_url?: string;
   expected_result?: string;
-  reflection_prompt?: string;
+  reflection_prompt?: string; // Deprecated, keeping for backward compatibility
   tasks: ChallengeTask[];
   resources: ChallengeResource[];
+  reflections: ChallengeReflection[];
   is_locked?: boolean; // Calculated frontend property
   progress?: number; // Calculated frontend property
 }
@@ -59,6 +60,13 @@ export interface ChallengeTask {
   title: string;
   description?: string;
   is_completed: boolean;
+  order_index: number;
+}
+
+export interface ChallengeReflection {
+  id: string;
+  day_id: string;
+  question: string;
   order_index: number;
 }
 

@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getDayByNumber, getDays } from '../../services/dataService';
 import { supabase } from '../../services/supabaseClient';
-import { ChallengeDay, ChallengeTask, ChallengeResource, ResourceType } from '../../types';
+import { ChallengeDay, ChallengeTask, ChallengeResource, ResourceType, ChallengeReflection } from '../../types';
 import { Button } from '../../components/Button';
 import {
   Save,
@@ -21,7 +21,8 @@ import {
   FileSpreadsheet,
   Headphones,
   Users,
-  Mic
+  Mic,
+  BrainCircuit
 } from 'lucide-react';
 
 export const ChallengeEditor: React.FC = () => {
@@ -59,7 +60,8 @@ export const ChallengeEditor: React.FC = () => {
           expected_result: '',
           reflection_prompt: '',
           tasks: [],
-          resources: []
+          resources: [],
+          reflections: []
         });
       }
       setLoading(false);
@@ -112,6 +114,48 @@ export const ChallengeEditor: React.FC = () => {
     }
     const reordered = newTasks.map((t, i) => ({ ...t, order_index: i }));
     setDay({ ...day, tasks: reordered });
+  };
+
+  // Reflection Handlers
+  const handleReflectionChange = (refId: string, value: string) => {
+    if (!day) return;
+    setDay({
+      ...day,
+      reflections: day.reflections.map(r => r.id === refId ? { ...r, question: value } : r)
+    });
+  };
+
+  const handleAddReflection = () => {
+    if (!day) return;
+    const newRef: ChallengeReflection = {
+      id: `new-ref-${Date.now()}`,
+      day_id: day.id,
+      question: 'Nova Pergunta de Reflexão',
+      order_index: day.reflections ? day.reflections.length : 0
+    };
+    setDay({ ...day, reflections: [...(day.reflections || []), newRef] });
+  };
+
+  const handleDeleteReflection = async (refId: string) => {
+    if (!day) return;
+    if (!window.confirm('Remover esta pergunta?')) return;
+
+    if (!refId.startsWith('new-')) {
+      await supabase.from('challenge_reflections').delete().eq('id', refId);
+    }
+    setDay({ ...day, reflections: day.reflections.filter(r => r.id !== refId) });
+  };
+
+  const moveReflection = (index: number, direction: 'up' | 'down') => {
+    if (!day) return;
+    const newRefs = [...day.reflections];
+    if (direction === 'up' && index > 0) {
+      [newRefs[index], newRefs[index - 1]] = [newRefs[index - 1], newRefs[index]];
+    } else if (direction === 'down' && index < newRefs.length - 1) {
+      [newRefs[index], newRefs[index + 1]] = [newRefs[index + 1], newRefs[index]];
+    }
+    const reordered = newRefs.map((r, i) => ({ ...r, order_index: i }));
+    setDay({ ...day, reflections: reordered });
   };
 
   const handleResourceChange = (resId: string, field: keyof ChallengeResource, value: any) => {
@@ -216,7 +260,7 @@ export const ChallengeEditor: React.FC = () => {
         fire_concept: day.fire_concept,
         fire_audio_url: day.fire_audio_url,
         expected_result: day.expected_result,
-        reflection_prompt: day.reflection_prompt
+        // reflection_prompt: day.reflection_prompt // Removed as it's now a list
       };
 
       let dayId = day.id;
@@ -256,6 +300,16 @@ export const ChallengeEditor: React.FC = () => {
         });
         const { error: resError } = await supabase.from('challenge_resources').upsert(resToUpsert);
         if (resError) throw resError;
+      }
+
+      if (day.reflections && day.reflections.length > 0) {
+        const refsToUpsert = day.reflections.map(r => {
+          const { id, ...rest } = r;
+          const refData = { ...rest, day_id: dayId };
+          return id.startsWith('new-') ? refData : { ...refData, id };
+        });
+        const { error: refError } = await supabase.from('challenge_reflections').upsert(refsToUpsert);
+        if (refError) throw refError;
       }
 
       alert('Salvo com sucesso!');
@@ -380,9 +434,15 @@ export const ChallengeEditor: React.FC = () => {
           </section>
 
           <section className="bg-fire-secondary/20 border border-white/5 rounded-xl p-6 space-y-6">
-            <h2 className="text-xl font-bold text-white flex items-center gap-2">
-              <MessageCircle size={20} className="text-fire-orange" /> Reflexão & Resultado
-            </h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                <BrainCircuit size={20} className="text-fire-orange" /> Reflexão Guiada
+              </h2>
+              <Button size="sm" onClick={handleAddReflection} variant="secondary">
+                <Plus size={16} />
+              </Button>
+            </div>
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-fire-gray mb-1">Resultado Esperado</label>
@@ -393,14 +453,30 @@ export const ChallengeEditor: React.FC = () => {
                   className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
                 />
               </div>
-              <div>
-                <label className="block text-sm font-medium text-fire-gray mb-1">Pergunta de Reflexão</label>
-                <input
-                  type="text"
-                  value={day.reflection_prompt || ''}
-                  onChange={(e) => handleDayChange('reflection_prompt', e.target.value)}
-                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
-                />
+
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-fire-gray">Perguntas de Reflexão</label>
+                {day.reflections && day.reflections.map((ref, index) => (
+                  <div key={ref.id} className="flex gap-2">
+                    <input
+                      type="text"
+                      value={ref.question}
+                      onChange={(e) => handleReflectionChange(ref.id, e.target.value)}
+                      className="flex-1 bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
+                      placeholder="Digite a pergunta..."
+                    />
+                    <div className="flex flex-col gap-1">
+                      <button onClick={() => moveReflection(index, 'up')} disabled={index === 0} className="p-1 text-fire-gray hover:text-white disabled:opacity-30"><ArrowUp size={14} /></button>
+                      <button onClick={() => moveReflection(index, 'down')} disabled={index === (day.reflections?.length || 0) - 1} className="p-1 text-fire-gray hover:text-white disabled:opacity-30"><ArrowDown size={14} /></button>
+                    </div>
+                    <button onClick={() => handleDeleteReflection(ref.id)} className="p-2 text-fire-gray hover:text-red-400"><Trash2 size={18} /></button>
+                  </div>
+                ))}
+                {(!day.reflections || day.reflections.length === 0) && (
+                  <div className="text-center text-fire-gray text-xs py-4 border-2 border-dashed border-white/10 rounded-lg">
+                    Nenhuma pergunta de reflexão.
+                  </div>
+                )}
               </div>
             </div>
           </section>
