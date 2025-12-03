@@ -48,7 +48,9 @@ serve(async (req) => {
 
         // 2. Parse Event
         const event = body.event || body.status;
-        const email = body.email || body.data?.buyer?.email;
+        // Normalize email to lowercase to ensure matching works
+        const rawEmail = body.email || body.data?.buyer?.email;
+        const email = rawEmail ? rawEmail.toLowerCase() : null;
         const name = body.name || body.data?.buyer?.name || "Novo Aluno";
 
         console.log(`Processing webhook for ${email}, event: ${event}`);
@@ -61,16 +63,20 @@ serve(async (req) => {
             }
 
             // Check if user exists
-            const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-            const existingUser = users.find(u => u.email === email);
+            // Query profiles directly to avoid pagination limits
+            const { data: existingProfile } = await supabaseAdmin
+                .from("profiles")
+                .select("id")
+                .eq("email", email)
+                .single();
 
-            if (existingUser) {
+            if (existingProfile) {
                 await supabaseAdmin
                     .from("profiles")
-                    .update({ subscription_status: "active" })
-                    .eq("id", existingUser.id);
+                    .update({ status: "ACTIVE" })
+                    .eq("id", existingProfile.id);
 
-                console.log(`Updated subscription for existing user: ${email}`);
+                console.log(`Updated status to ACTIVE for existing user: ${email}`);
             } else {
                 // Create new user with random password
                 const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
@@ -88,7 +94,7 @@ serve(async (req) => {
                     await supabaseAdmin
                         .from("profiles")
                         .update({
-                            subscription_status: "active",
+                            status: "ACTIVE",
                             must_change_password: true
                         })
                         .eq("id", newUser.user.id);
@@ -124,16 +130,26 @@ serve(async (req) => {
                     }
                 }
             }
-        } else if (event === "CANCELED" || event === "REFUNDED" || event === "CHARGEBACK") {
+        } else if (event === "CANCELED" || event === "REFUNDED" || event === "CHARGEBACK" || event === "PURCHASE_CANCELED" || event === "PURCHASE_REFUNDED" || event === "PURCHASE_CHARGEBACK") {
             // Handle cancellations
-            const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-            const existingUser = users.find(u => u.email === email);
+            // Query profiles directly to avoid pagination limits of listUsers()
+            const { data: profile } = await supabaseAdmin
+                .from("profiles")
+                .select("id")
+                .eq("email", email)
+                .single();
 
-            if (existingUser) {
-                await supabaseAdmin
-                    .from("profiles")
-                    .update({ subscription_status: "inactive" })
-                    .eq("id", existingUser.id);
+            if (profile) {
+                // STRATEGY CHANGE: Delete the user entirely to ensure they cannot log in
+                const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+
+                if (deleteError) {
+                    console.error(`Error deleting user ${email}:`, deleteError);
+                } else {
+                    console.log(`Deleted user: ${email} (ID: ${profile.id}) due to event: ${event}`);
+                }
+            } else {
+                console.log(`User not found for cancellation: ${email}`);
             }
         }
 

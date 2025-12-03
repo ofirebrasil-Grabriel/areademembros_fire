@@ -38,11 +38,23 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const checkProfile = async (uid: string) => {
-      const { data } = await supabase
+      console.log("Checking profile for:", uid);
+      const { data, error } = await supabase
         .from('profiles')
-        .select('must_change_password')
+        .select('must_change_password, status')
         .eq('id', uid)
         .single();
+
+      console.log("Profile data:", data);
+      console.log("Profile error:", error);
+
+      if (data?.status === 'BLOCKED') {
+        console.log("User is BLOCKED. Signing out...");
+        await supabase.auth.signOut();
+        setSession(null);
+        alert('Sua conta está bloqueada. Entre em contato com o suporte.');
+        return;
+      }
 
       if (data?.must_change_password) {
         setMustChangePassword(true);
@@ -52,10 +64,10 @@ const App: React.FC = () => {
     };
 
     // 1. Check active Supabase session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
         setSession(session);
-        checkProfile(session.user.id);
+        await checkProfile(session.user.id);
       }
       setLoading(false);
     }).catch(err => {
@@ -66,10 +78,10 @@ const App: React.FC = () => {
     // 2. Listen for auth changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
+    } = supabase.auth.onAuthStateChange(async (_event, session) => {
       setSession(session);
       if (session) {
-        checkProfile(session.user.id);
+        await checkProfile(session.user.id);
       }
       setLoading(false);
     });
