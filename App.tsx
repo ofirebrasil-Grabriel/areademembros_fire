@@ -37,96 +37,71 @@ const App: React.FC = () => {
   const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
-    // Safety timeout
-    const timeout = setTimeout(() => {
-      console.warn("Session check timed out");
-      setLoading(false);
-    }, 5000);
+    let mounted = true;
 
-    const validateAndLoad = async () => {
+    // Centralized session handler
+    const handleSession = async (currentSession: Session | null) => {
       try {
-        // Step 1: Check session
-        const { data: { session } } = await supabase.auth.getSession();
-
-        if (!session) {
-          // No session - go to login
-          setSession(null);
-          setLoading(false);
-          clearTimeout(timeout);
+        if (!currentSession) {
+          if (mounted) {
+            setSession(null);
+            setMustChangePassword(false);
+            setLoading(false);
+          }
           return;
         }
 
-        // Step 2: Verify profile exists and check status
+        // Check profile
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('must_change_password, status')
-          .eq('id', session.user.id)
+          .eq('id', currentSession.user.id)
           .single();
 
-        // Step 3: Handle invalid profile or BLOCKED status
-        if (error || !profile) {
-          console.warn("Profile not found - user was deleted");
-          localStorage.clear();
-          window.location.href = '#/login';
-          return;
-        }
-
-        if (profile.status === 'BLOCKED') {
-          console.warn("User is BLOCKED");
+        if (profile?.status === 'BLOCKED') {
           alert('Seu acesso foi bloqueado. Entre em contato com o suporte.');
+          await supabase.auth.signOut();
           localStorage.clear();
+          if (mounted) {
+            setSession(null);
+            setLoading(false);
+          }
           window.location.href = '#/login';
           return;
         }
 
-        // Step 4: Set flags
-        setMustChangePassword(profile.must_change_password || false);
-        setSession(session);
+        if (error && !profile) {
+          console.warn("Profile check failed - proceeding with session only", error);
+        }
 
-        // Step 5: Done - release the page
-        setLoading(false);
-        clearTimeout(timeout);
-
+        if (mounted) {
+          setSession(currentSession);
+          setMustChangePassword(profile?.must_change_password || false);
+          setLoading(false);
+        }
       } catch (err) {
-        console.error("Validation error:", err);
-        setLoading(false);
-        clearTimeout(timeout);
+        console.error("Session handling error:", err);
+        if (mounted) setLoading(false);
       }
     };
 
-    validateAndLoad();
+    // 1. Initial Check
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      handleSession(session);
+    });
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (!session) {
-        setSession(null);
-        setMustChangePassword(false);
-        return;
-      }
-
-      // Re-validate on auth change
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('must_change_password, status')
-        .eq('id', session.user.id)
-        .single();
-
-      if (profile?.status === 'BLOCKED' || !profile) {
-        if (profile?.status === 'BLOCKED') {
-          alert('Seu acesso foi bloqueado. Entre em contato com o suporte.');
-        }
-        localStorage.clear();
-        window.location.href = '#/login';
-        return;
-      }
-
-      setSession(session);
-      setMustChangePassword(profile.must_change_password || false);
+    // 2. Listen for changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // If the session is the same as what we have (and we aren't loading), skip to avoid loops
+      // But for safety, we just re-run the handler which is cheap enough (profile fetch)
+      // Optimization: If event is TOKEN_REFRESHED, maybe we don't need to fetch profile? 
+      // For now, keep it simple and robust.
+      handleSession(session);
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
-      clearTimeout(timeout);
     };
   }, []);
 
