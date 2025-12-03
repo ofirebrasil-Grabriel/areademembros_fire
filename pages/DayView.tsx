@@ -14,6 +14,7 @@ import {
   Link as LinkIcon,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   Save,
   CheckCircle,
   Sun,
@@ -37,6 +38,10 @@ export const DayView: React.FC = () => {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
+
+  // UI State for Collapsible Text
+  const [morningTextOpen, setMorningTextOpen] = useState(false);
+  const [fireTextOpen, setFireTextOpen] = useState(false);
 
   // Note State
   const [userNote, setUserNote] = useState('');
@@ -238,14 +243,31 @@ export const DayView: React.FC = () => {
               Mensagem Matinal
             </h2>
             <div className="space-y-4">
-              {day.morning_audio_url && (
-                <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                  <audio controls className="w-full h-10" src={day.morning_audio_url} />
+              {day.morning_audio_url ? (
+                <div className="space-y-4">
+                  <div className="bg-black/40 p-4 rounded-xl border border-white/10 shadow-inner">
+                    <audio controls className="w-full h-12 accent-fire-orange" src={day.morning_audio_url} />
+                  </div>
+
+                  <button
+                    onClick={() => setMorningTextOpen(!morningTextOpen)}
+                    className="flex items-center gap-2 text-sm text-fire-gray hover:text-white transition-colors font-medium"
+                  >
+                    {morningTextOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {morningTextOpen ? 'Ocultar texto' : 'Ler mensagem completa'}
+                  </button>
+
+                  {morningTextOpen && (
+                    <div className="prose prose-invert prose-lg text-fire-light/90 leading-relaxed font-light italic border-l-4 border-yellow-500/30 pl-6 animate-in fade-in slide-in-from-top-2">
+                      "{day.morning_message}"
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="prose prose-invert prose-lg text-fire-light/90 leading-relaxed font-light italic border-l-4 border-yellow-500/30 pl-6">
+                  "{day.morning_message}"
                 </div>
               )}
-              <div className="prose prose-invert prose-lg text-fire-light/90 leading-relaxed font-light italic border-l-4 border-yellow-500/30 pl-6">
-                "{day.morning_message}"
-              </div>
             </div>
           </section>
 
@@ -257,14 +279,31 @@ export const DayView: React.FC = () => {
               Conceito FIRE do Dia
             </h2>
             <div className="bg-fire-secondary/20 p-6 rounded-xl border border-white/5 relative z-10 space-y-4">
-              {day.fire_audio_url && (
-                <div className="bg-black/20 p-4 rounded-xl border border-white/5">
-                  <audio controls className="w-full h-10" src={day.fire_audio_url} />
+              {day.fire_audio_url ? (
+                <div className="space-y-4">
+                  <div className="bg-black/40 p-4 rounded-xl border border-white/10 shadow-inner">
+                    <audio controls className="w-full h-12 accent-fire-orange" src={day.fire_audio_url} />
+                  </div>
+
+                  <button
+                    onClick={() => setFireTextOpen(!fireTextOpen)}
+                    className="flex items-center gap-2 text-sm text-fire-gray hover:text-white transition-colors font-medium"
+                  >
+                    {fireTextOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                    {fireTextOpen ? 'Ocultar texto' : 'Ler conceito completo'}
+                  </button>
+
+                  {fireTextOpen && (
+                    <p className="text-lg font-medium text-white text-center md:text-left leading-relaxed animate-in fade-in slide-in-from-top-2">
+                      {day.fire_concept}
+                    </p>
+                  )}
                 </div>
+              ) : (
+                <p className="text-lg font-medium text-white text-center md:text-left leading-relaxed">
+                  {day.fire_concept}
+                </p>
               )}
-              <p className="text-lg font-medium text-white text-center md:text-left leading-relaxed">
-                {day.fire_concept}
-              </p>
             </div>
           </section>
 
