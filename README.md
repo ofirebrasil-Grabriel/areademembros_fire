@@ -17,13 +17,8 @@ Isso criará:
 
 ## Acesso Admin
 
-O sistema possui um acesso de demonstração local e suporte a acesso real via banco de dados.
-
-### Acesso Demo (Sem banco de dados)
-*   **Email:** `admin@ofire.com.br`
-*   **Senha:** `admin`
-
-### Acesso Real (Com banco de dados)
+### Acesso
+O sistema utiliza autenticação via Supabase. Certifique-se de ter as credenciais configuradas no `.env`. (Com banco de dados)
 1.  Cadastre-se normalmente na tela de login.
 2.  Vá no painel do Supabase -> Table Editor -> `profiles`.
 3.  Encontre seu usuário e mude a coluna `role` para `admin`.

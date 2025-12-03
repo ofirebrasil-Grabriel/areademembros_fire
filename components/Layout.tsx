@@ -1,12 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FireLogo } from './Logo';
-import { 
-  LogOut, 
-  LayoutDashboard, 
-  Settings, 
-  Users, 
-  Menu, 
+import { ForcePasswordChange } from './ForcePasswordChange';
+import { getCurrentUserProfile } from '../services/dataService';
+import {
+  LogOut,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Menu,
   X,
   Flame,
   Award,
@@ -22,21 +24,25 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const [mustChangePassword, setMustChangePassword] = useState(false);
+
+  useEffect(() => {
+    const checkPasswordStatus = async () => {
+      const profile = await getCurrentUserProfile();
+      if (profile?.must_change_password) {
+        setMustChangePassword(true);
+      }
+    };
+    checkPasswordStatus();
+  }, [location.pathname]);
 
   const handleLogout = async () => {
-    // Check if it's a demo session
-    if (localStorage.getItem('fire_demo_session')) {
-      localStorage.removeItem('fire_demo_session');
-      // Full reload to clear state in App.tsx
-      window.location.href = '/login';
-      window.location.reload();
-      return;
-    }
-
     // Standard supabase logout
     await supabase.auth.signOut();
     navigate('/login');
   };
+
+
 
   const navItems = isAdmin ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -56,7 +62,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
   return (
     <div className="min-h-screen bg-fire-dark flex">
       {/* Mobile Menu Button */}
-      <button 
+      <button
         className="lg:hidden fixed top-4 right-4 z-50 p-2 bg-fire-secondary rounded-md text-fire-light"
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
       >
@@ -65,7 +71,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
 
       {/* Sidebar */}
       <aside className={`
-        fixed lg:static inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out
+        fixed lg:sticky lg:top-0 lg:h-screen inset-y-0 left-0 z-40 w-64 transform transition-transform duration-300 ease-in-out
         bg-[#011627] border-r border-fire-secondary
         ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
@@ -74,7 +80,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
             <FireLogo />
           </div>
 
-          <nav className="flex-1 px-4 py-8 space-y-2">
+          <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
             {navItems.map((item) => {
               const isActive = location.pathname === item.path || (item.path !== '/' && item.path !== '/admin' && location.pathname.startsWith(item.path));
               return (
@@ -84,8 +90,8 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
                   onClick={() => setIsSidebarOpen(false)}
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                    ${isActive 
-                      ? 'bg-fire-orange text-white shadow-lg shadow-orange-900/20' 
+                    ${isActive
+                      ? 'bg-fire-orange text-white shadow-lg shadow-orange-900/20'
                       : 'text-fire-gray hover:bg-fire-secondary hover:text-white'}
                   `}
                 >
@@ -111,16 +117,21 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
       {/* Main Content */}
       <main className="flex-1 overflow-x-hidden overflow-y-auto bg-fire-dark relative">
         <div className="container mx-auto px-6 py-8">
-           {children}
+          {children}
         </div>
       </main>
-      
+
       {/* Overlay for mobile */}
-      {isSidebarOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-          onClick={() => setIsSidebarOpen(false)}
-        />
+      {
+        isSidebarOpen && (
+          <div
+            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+            onClick={() => setIsSidebarOpen(false)}
+          />
+        )
+      }
+      {mustChangePassword && (
+        <ForcePasswordChange onSuccess={() => setMustChangePassword(false)} />
       )}
     </div>
   );

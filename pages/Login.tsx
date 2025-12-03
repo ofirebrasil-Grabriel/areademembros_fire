@@ -3,70 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import { FireLogo } from '../components/Logo';
 import { Button } from '../components/Button';
-import { Mail, Lock, Loader2, ShieldCheck, Info, User } from 'lucide-react';
+import { Mail, Lock, Loader2 } from 'lucide-react';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const createMockSession = (role: 'admin' | 'member') => ({
-    access_token: `demo-token-${role}`,
-    token_type: 'bearer',
-    expires_in: 3600,
-    refresh_token: `demo-refresh-${role}`,
-    user: {
-      id: `${role}-user-id`,
-      aud: 'authenticated',
-      role: 'authenticated',
-      email: `${role}@ofire.com.br`,
-      app_metadata: { provider: 'email', role: role },
-      user_metadata: { full_name: role === 'admin' ? 'Super Admin' : 'Membro Visitante', role: role },
-      created_at: new Date().toISOString(),
-    }
-  });
-
-  const handleDemoLogin = (role: 'admin' | 'member') => {
-    const session = createMockSession(role);
-    localStorage.setItem('fire_demo_session', JSON.stringify(session));
-    // Force a reload to ensure App.tsx picks up the new "session" and redirects correctly
-    window.location.href = role === 'admin' ? '/admin' : '/';
-    window.location.reload();
-  };
+  // Forgot Password State
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    // Backdoor for Admin Demo
-    if (email === 'admin@ofire.com.br' && password === 'admin') {
-      setTimeout(() => {
-        handleDemoLogin('admin');
-        setLoading(false);
-      }, 800);
-      return;
-    }
-
     try {
-      if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (error) throw error;
-        alert('Cadastro realizado! Verifique seu e-mail para confirmar.');
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-        if (error) throw error;
-        navigate('/');
-      }
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (error) throw error;
+      navigate('/');
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -85,6 +48,27 @@ export const Login: React.FC = () => {
     }
   };
 
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotLoading(true);
+    setForgotMessage(null);
+
+    try {
+      const { data, error } = await supabase.functions.invoke('reset-password', {
+        body: { email: forgotEmail }
+      });
+
+      if (error) throw error;
+
+      setForgotMessage({ type: 'success', text: 'Se o e-mail existir, uma nova senha foi enviada.' });
+      setForgotEmail('');
+    } catch (err: any) {
+      setForgotMessage({ type: 'error', text: 'Erro ao solicitar recuperação.' });
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-fire-dark p-4 relative overflow-hidden">
       {/* Background Decor */}
@@ -97,7 +81,7 @@ export const Login: React.FC = () => {
         </div>
 
         <h2 className="text-2xl font-bold text-center mb-2 text-white font-montserrat">
-          {isSignUp ? 'Criar Conta' : 'Bem-vindo de volta'}
+          Bem-vindo de volta
         </h2>
         <p className="text-center text-fire-gray mb-8 text-sm">
           Acesse sua área exclusiva do Desafio FIRE 15 Dias
@@ -108,17 +92,6 @@ export const Login: React.FC = () => {
             {error}
           </div>
         )}
-
-        {/* Admin Tip */}
-        <div className="mb-6 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg flex items-start gap-3">
-          <Info className="text-blue-400 shrink-0 mt-0.5" size={16} />
-          <div className="text-xs text-blue-200">
-            <span className="font-bold text-blue-300 block mb-1">Dica para Desenvolvedor:</span>
-            Para acessar como Admin, use:<br/>
-            E-mail: <code className="bg-black/20 px-1 rounded text-white">admin@ofire.com.br</code><br/>
-            Senha: <code className="bg-black/20 px-1 rounded text-white">admin</code>
-          </div>
-        </div>
 
         <form onSubmit={handleAuth} className="space-y-4">
           <div className="space-y-2">
@@ -151,8 +124,18 @@ export const Login: React.FC = () => {
             </div>
           </div>
 
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => setShowForgotModal(true)}
+              className="text-xs text-fire-orange hover:text-fire-orange/80 transition-colors"
+            >
+              Esqueci minha senha
+            </button>
+          </div>
+
           <Button type="submit" fullWidth disabled={loading}>
-            {loading ? <Loader2 className="animate-spin" /> : (isSignUp ? 'Cadastrar' : 'Entrar')}
+            {loading ? <Loader2 className="animate-spin" /> : 'Entrar'}
           </Button>
         </form>
 
@@ -162,7 +145,7 @@ export const Login: React.FC = () => {
           <div className="h-px bg-fire-secondary flex-1"></div>
         </div>
 
-        <button 
+        <button
           onClick={handleGoogleLogin}
           className="mt-6 w-full flex items-center justify-center gap-3 bg-white text-gray-800 py-3 rounded-lg hover:bg-gray-100 transition-colors font-medium text-sm"
         >
@@ -187,37 +170,56 @@ export const Login: React.FC = () => {
           Google
         </button>
 
-        <p className="mt-8 text-center text-sm text-fire-gray">
-          {isSignUp ? 'Já tem uma conta?' : 'Ainda não tem conta?'}
-          <button 
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="ml-2 text-fire-orange hover:underline font-medium"
-          >
-            {isSignUp ? 'Fazer Login' : 'Cadastre-se'}
-          </button>
-        </p>
 
-        {/* Demo Access Buttons */}
-        <div className="mt-8 pt-6 border-t border-white/5 flex flex-col items-center gap-3">
-          <p className="text-[10px] text-fire-gray uppercase tracking-widest font-bold">Acesso de Demonstração</p>
-          <div className="flex gap-3">
-            <button 
-              onClick={() => handleDemoLogin('member')}
-              className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-xs text-fire-gray hover:text-white transition-all border border-white/5 hover:border-green-400/30"
+
+
+      </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="bg-fire-secondary/20 border border-white/10 p-8 rounded-2xl max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in duration-300">
+            <button
+              onClick={() => setShowForgotModal(false)}
+              className="absolute top-4 right-4 text-fire-gray hover:text-white"
             >
-              <User size={14} className="text-green-400" />
-              <span>Membro</span>
+              ✕
             </button>
-            <button 
-              onClick={() => handleDemoLogin('admin')}
-              className="group flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 hover:bg-white/10 text-xs text-fire-gray hover:text-white transition-all border border-white/5 hover:border-fire-orange/30"
-            >
-              <ShieldCheck size={14} className="text-fire-orange" />
-              <span>Admin</span>
-            </button>
+
+            <h3 className="text-xl font-bold text-white mb-4 font-montserrat">Recuperar Senha</h3>
+            <p className="text-fire-gray text-sm mb-6">
+              Digite seu e-mail abaixo. Se ele estiver cadastrado, enviaremos uma nova senha temporária para você.
+            </p>
+
+            <form onSubmit={handleForgotPassword} className="space-y-4">
+              <div>
+                <label className="text-sm font-medium text-fire-gray">E-mail cadastrado</label>
+                <div className="relative mt-1">
+                  <Mail className="absolute left-3 top-3.5 text-fire-gray" size={18} />
+                  <input
+                    type="email"
+                    required
+                    value={forgotEmail}
+                    onChange={(e) => setForgotEmail(e.target.value)}
+                    className="w-full bg-black/30 border border-white/10 rounded-lg py-3 pl-10 pr-4 text-white focus:outline-none focus:border-fire-orange transition-all"
+                    placeholder="seu@email.com"
+                  />
+                </div>
+              </div>
+
+              <Button type="submit" fullWidth disabled={forgotLoading}>
+                {forgotLoading ? <Loader2 className="animate-spin" /> : 'Enviar Nova Senha'}
+              </Button>
+
+              {forgotMessage && (
+                <div className={`p-3 rounded-lg text-sm text-center ${forgotMessage.type === 'success' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                  {forgotMessage.text}
+                </div>
+              )}
+            </form>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

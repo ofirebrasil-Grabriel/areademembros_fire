@@ -13,10 +13,12 @@ export interface UserProfile {
   id: string;
   email: string;
   full_name?: string;
+  phone?: string;
   role: UserRole;
   status: UserStatus;
   avatar_url?: string;
   created_at: string;
+  must_change_password?: boolean;
 }
 
 export interface UserDetailedProfile extends UserProfile {

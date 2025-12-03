@@ -34,7 +34,7 @@ export const AdminDashboard: React.FC = () => {
   const cards = [
     { label: 'Membros Totais', value: stats.totalMembers, icon: Users, change: 'Total', color: 'text-blue-400', bg: 'bg-blue-400/10' },
     { label: 'Receita (Estimada)', value: `R$ ${(stats.activeUsers * 297).toLocaleString()}`, icon: DollarSign, change: 'Est.', color: 'text-green-400', bg: 'bg-green-400/10' },
-    { label: 'Usuários Ativos', value: stats.activeUsers, icon: Activity, change: `${Math.round((stats.activeUsers/stats.totalMembers || 0)*100)}%`, color: 'text-fire-orange', bg: 'bg-fire-orange/10' },
+    { label: 'Usuários Ativos', value: stats.activeUsers, icon: Activity, change: `${Math.round((stats.activeUsers / stats.totalMembers || 0) * 100)}%`, color: 'text-fire-orange', bg: 'bg-fire-orange/10' },
     { label: 'Conclusão Média', value: `${stats.avgCompletion}%`, icon: TrendingUp, change: 'Geral', color: 'text-purple-400', bg: 'bg-purple-400/10' },
   ];
 
@@ -46,11 +46,11 @@ export const AdminDashboard: React.FC = () => {
           <p className="text-fire-gray mt-1">Visão geral do desempenho e saúde do Desafio FIRE.</p>
         </div>
         <div className="text-sm text-fire-gray bg-white/5 px-4 py-2 rounded-lg border border-white/5 flex items-center gap-2">
-           <Clock size={14} />
-           Atualizado: {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+          <Clock size={14} />
+          Atualizado: {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
         </div>
       </div>
-      
+
       {/* KPI Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {cards.map((stat, index) => (
@@ -74,20 +74,20 @@ export const AdminDashboard: React.FC = () => {
         <div className="lg:col-span-2 bg-fire-secondary/20 border border-white/5 rounded-xl p-6">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold text-white font-montserrat flex items-center gap-2">
-              <BarChart3 className="text-fire-orange" size={20} /> 
-              Engajamento (Demo)
+              <BarChart3 className="text-fire-orange" size={20} />
+              Engajamento
             </h2>
           </div>
-          
+
           <div className="h-64 flex items-end justify-between gap-3 px-2">
             {[35, 45, 30, 60, 55, 75, 50, 65, 80, 70, 90, 85, 95, 80, 70].map((h, i) => (
               <div key={i} className="w-full relative group">
                 <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-white text-fire-dark text-xs font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   {h}%
                 </div>
-                <div 
-                   className="w-full bg-gradient-to-t from-fire-secondary to-fire-orange/50 rounded-t-sm hover:from-fire-orange hover:to-fire-orange transition-all duration-300 cursor-pointer" 
-                   style={{ height: `${h}%` }}
+                <div
+                  className="w-full bg-gradient-to-t from-fire-secondary to-fire-orange/50 rounded-t-sm hover:from-fire-orange hover:to-fire-orange transition-all duration-300 cursor-pointer"
+                  style={{ height: `${h}%` }}
                 ></div>
               </div>
             ))}
@@ -115,7 +115,7 @@ export const AdminDashboard: React.FC = () => {
                 <div className="text-sm text-fire-gray">Status</div>
                 <div className="font-bold text-green-400 text-xs uppercase bg-green-500/10 px-2 py-1 rounded">Ativo</div>
               </div>
-              <button 
+              <button
                 onClick={() => navigate('/admin/challenges')}
                 className="w-full mt-2 text-xs text-fire-orange hover:text-white transition-colors text-center"
               >
@@ -125,44 +125,44 @@ export const AdminDashboard: React.FC = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Recent Activity */}
       <div className="bg-fire-secondary/20 border border-white/5 rounded-xl p-6">
-         <h2 className="text-xl font-bold text-white font-montserrat mb-4">Atividade Recente</h2>
-         {activity.length > 0 ? (
-           <div className="space-y-4">
-              {activity.map((item, i) => (
-                <div key={item.id || i} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0 hover:bg-white/5 p-2 rounded transition-colors">
-                   <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-fire-orange/20 flex items-center justify-center text-fire-orange text-xs font-bold border border-fire-orange/20">
-                         {item.user_name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                         <p className="text-sm text-white">
-                           <span className="font-bold">{item.user_name}</span> completou tarefa:
-                         </p>
-                         <p className="text-xs text-fire-gray">
-                           Dia {item.day_number} - {item.task_title}
-                         </p>
-                      </div>
-                   </div>
-                   <div className="text-right">
-                      <div className="text-xs text-fire-gray flex items-center gap-1 justify-end">
-                        <Clock size={12} />
-                        {new Date(item.completed_at).toLocaleDateString('pt-BR')}
-                      </div>
-                      <div className="text-[10px] text-fire-gray/60">
-                        {new Date(item.completed_at).toLocaleTimeString('pt-BR')}
-                      </div>
-                   </div>
+        <h2 className="text-xl font-bold text-white font-montserrat mb-4">Atividade Recente</h2>
+        {activity.length > 0 ? (
+          <div className="space-y-4">
+            {activity.map((item, i) => (
+              <div key={item.id || i} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0 hover:bg-white/5 p-2 rounded transition-colors">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-full bg-fire-orange/20 flex items-center justify-center text-fire-orange text-xs font-bold border border-fire-orange/20">
+                    {item.user_name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="text-sm text-white">
+                      <span className="font-bold">{item.user_name}</span> completou tarefa:
+                    </p>
+                    <p className="text-xs text-fire-gray">
+                      Dia {item.day_number} - {item.task_title}
+                    </p>
+                  </div>
                 </div>
-              ))}
-           </div>
-         ) : (
-           <div className="text-center py-8 text-fire-gray">
-             <p>Nenhuma atividade recente registrada.</p>
-           </div>
-         )}
+                <div className="text-right">
+                  <div className="text-xs text-fire-gray flex items-center gap-1 justify-end">
+                    <Clock size={12} />
+                    {new Date(item.completed_at).toLocaleDateString('pt-BR')}
+                  </div>
+                  <div className="text-[10px] text-fire-gray/60">
+                    {new Date(item.completed_at).toLocaleTimeString('pt-BR')}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-8 text-fire-gray">
+            <p>Nenhuma atividade recente registrada.</p>
+          </div>
+        )}
       </div>
     </div>
   );

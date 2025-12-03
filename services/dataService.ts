@@ -106,7 +106,7 @@ export const getDays = async (): Promise<ChallengeDay[]> => {
     console.error("Error fetching days:", error);
     return [];
   }
-  
+
   if (!data || data.length === 0) {
     return [];
   }
@@ -235,11 +235,11 @@ export const getUserNote = async (userId: string, dayId: string): Promise<string
 export const saveUserNote = async (userId: string, dayId: string, content: string) => {
   await supabase
     .from('user_notes')
-    .upsert({ 
-      user_id: userId, 
-      day_id: dayId, 
-      content, 
-      updated_at: new Date().toISOString() 
+    .upsert({
+      user_id: userId,
+      day_id: dayId,
+      content,
+      updated_at: new Date().toISOString()
     });
 };
 
@@ -267,34 +267,36 @@ export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {
       avatar_url: user.user_metadata?.avatar_url
     } as UserProfile;
   }
-  
+
   return data as UserProfile;
 };
 
-export const updateCurrentUserProfile = async (fullName: string, avatarUrl?: string) => {
+export const updateCurrentUserProfile = async (fullName: string, avatarUrl?: string, phone?: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;
 
   const updates: any = { full_name: fullName };
   if (avatarUrl) updates.avatar_url = avatarUrl;
+  if (phone) updates.phone = phone;
 
   await supabase
     .from('profiles')
     .update(updates)
     .eq('id', user.id);
-    
+
   // Also update auth metadata to keep sync
   const metadataUpdates: any = { full_name: fullName };
   if (avatarUrl) metadataUpdates.avatar_url = avatarUrl;
-  
+  if (phone) metadataUpdates.phone = phone;
+
   await supabase.auth.updateUser({
     data: metadataUpdates
   });
 };
 
 export const getUsers = async (
-  page: number = 1, 
-  limit: number = 10, 
+  page: number = 1,
+  limit: number = 10,
   search: string = ''
 ): Promise<{ data: UserProfile[], count: number }> => {
   const from = (page - 1) * limit;
@@ -327,7 +329,7 @@ export const getUserFullDetails = async (userId: string): Promise<UserDetailedPr
     .select('*')
     .eq('id', userId)
     .single();
-  
+
   if (profileError || !profile) return null;
 
   // 2. Get Progress (Completed Tasks)
@@ -358,7 +360,7 @@ export const getUserFullDetails = async (userId: string): Promise<UserDetailedPr
 
   const completedCount = progress?.length || 0;
   const percentage = totalTasks ? Math.round((completedCount / totalTasks) * 100) : 0;
-  
+
   // Transform progress data for UI
   const completedTasksList = progress?.map((p: any) => ({
     day_number: p.task?.challenges?.day_number || 0,
@@ -398,6 +400,42 @@ export const updateUserRole = async (userId: string, role: UserRole) => {
     .eq('id', userId);
 };
 
+export const deleteUser = async (userId: string) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("No session");
+
+  const { error } = await supabase.functions.invoke('admin-actions', {
+    body: { action: 'deleteUser', userId }
+  });
+
+  if (error) throw error;
+  if (error) throw error;
+};
+
+export const createAdminUser = async (userData: any) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("No session");
+
+  const { data, error } = await supabase.functions.invoke('admin-actions', {
+    body: { action: 'createUser', ...userData }
+  });
+
+  if (error) throw error;
+  return data;
+};
+
+export const updateAdminUser = async (userData: any) => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("No session");
+
+  const { data, error } = await supabase.functions.invoke('admin-actions', {
+    body: { action: 'updateUser', ...userData }
+  });
+
+  if (error) throw error;
+  return data;
+};
+
 // --- STORAGE SERVICES ---
 
 export const getStorageFiles = async (): Promise<StorageFile[]> => {
@@ -414,17 +452,17 @@ export const getStorageFiles = async (): Promise<StorageFile[]> => {
     console.error("Storage list error:", error);
     return [];
   }
-  
+
   // Files at root
   const rootFiles = data.filter(d => d.id !== null).map(d => ({
-     ...d,
-     url: supabase.storage.from('challenges_assets').getPublicUrl(d.name).data.publicUrl
+    ...d,
+    url: supabase.storage.from('challenges_assets').getPublicUrl(d.name).data.publicUrl
   }));
 
   // Simple implementation: We only list root for now, or assume flat structure for "Library" view
   // If folders are used (like day-01/), we'd need recursive listing or folder navigation UI.
   // For this version, let's list root.
-  
+
   return rootFiles as unknown as StorageFile[];
 };
 
@@ -433,7 +471,7 @@ export const deleteStorageFile = async (fileName: string) => {
     .storage
     .from('challenges_assets')
     .remove([fileName]);
-  
+
   if (error) throw error;
 };
 
@@ -444,7 +482,7 @@ export const getDashboardStats = async (): Promise<DashboardStats> => {
   try {
     // 1. Fetch Users Stats
     const { data: profiles, error: profilesError } = await supabase.from('profiles').select('status');
-    
+
     if (profilesError) throw profilesError;
 
     const totalMembers = profiles?.length || 0;
@@ -494,7 +532,7 @@ export const getRecentActivity = async () => {
       .limit(10);
 
     if (error) throw error;
-    
+
     return data.map((item: any) => ({
       id: item.id,
       user_name: item.profiles?.full_name || item.profiles?.email || 'Usuário Desconhecido',
