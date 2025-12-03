@@ -68,9 +68,15 @@ export const AdminUsers: React.FC = () => {
   const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     if (actionLoading) return;
     setActionLoading(userId);
-    await updateUserStatus(userId, newStatus);
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
-    setActionLoading(null);
+    try {
+      await updateUserStatus(userId, newStatus);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, status: newStatus } : u));
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("Erro ao atualizar status do usuário. Tente novamente.");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleRoleChange = async (userId: string, newRole: UserRole) => {
@@ -78,10 +84,15 @@ export const AdminUsers: React.FC = () => {
     if (!window.confirm(`Tem certeza que deseja alterar o nível de acesso deste usuário para ${newRole}?`)) return;
 
     setActionLoading(userId);
-    await updateUserRole(userId, newRole);
-    setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
-    setActionLoading(null);
-    setActionLoading(null);
+    try {
+      await updateUserRole(userId, newRole);
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+    } catch (error) {
+      console.error("Error updating role:", error);
+      alert("Erro ao atualizar função do usuário.");
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleDeleteUser = async (userId: string) => {

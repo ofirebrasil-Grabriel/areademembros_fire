@@ -47,7 +47,7 @@ serve(async (req) => {
         console.log("Action:", action);
 
         if (action === 'blockUser' || action === 'deleteUser') {
-            // Changed from delete to block to preserve user data
+            // Legacy support or specific block action
             if (!userId) throw new Error("userId is required");
 
             const { error: updateError } = await supabaseAdmin
@@ -58,6 +58,22 @@ serve(async (req) => {
             if (updateError) throw updateError;
 
             return new Response(JSON.stringify({ message: "User blocked successfully" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
+
+        if (action === 'updateUserStatus') {
+            const { status } = body;
+            if (!userId || !status) throw new Error("userId and status are required");
+
+            const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ status })
+                .eq('id', userId);
+
+            if (updateError) throw updateError;
+
+            return new Response(JSON.stringify({ message: `User status updated to ${status}` }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }

@@ -423,10 +423,14 @@ export const getUserFullDetails = async (userId: string): Promise<UserDetailedPr
 };
 
 export const updateUserStatus = async (userId: string, status: UserStatus) => {
-  await supabase
-    .from('profiles')
-    .update({ status })
-    .eq('id', userId);
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("No session");
+
+  const { error } = await supabase.functions.invoke('admin-actions', {
+    body: { action: 'updateUserStatus', userId, status }
+  });
+
+  if (error) throw error;
 };
 
 export const updateUserRole = async (userId: string, role: UserRole) => {
