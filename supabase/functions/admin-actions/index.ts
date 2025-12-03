@@ -48,13 +48,18 @@ serve(async (req) => {
 
         console.log("Action:", action);
 
-        if (action === 'deleteUser') {
+        if (action === 'blockUser' || action === 'deleteUser') {
+            // Changed from delete to block to preserve user data
             if (!userId) throw new Error("userId is required");
 
-            const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
-            if (deleteError) throw deleteError;
+            const { error: updateError } = await supabaseAdmin
+                .from('profiles')
+                .update({ status: 'BLOCKED' })
+                .eq('id', userId);
 
-            return new Response(JSON.stringify({ message: "User deleted successfully" }), {
+            if (updateError) throw updateError;
+
+            return new Response(JSON.stringify({ message: "User blocked successfully" }), {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }

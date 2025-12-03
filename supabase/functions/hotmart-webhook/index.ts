@@ -131,22 +131,32 @@ serve(async (req) => {
                 }
             }
         } else if (event === "CANCELED" || event === "REFUNDED" || event === "CHARGEBACK" || event === "PURCHASE_CANCELED" || event === "PURCHASE_REFUNDED" || event === "PURCHASE_CHARGEBACK") {
-            // Handle cancellations
-            // Query profiles directly to avoid pagination limits of listUsers()
+            // Handle cancellations/refunds - BLOCK user instead of deleting
+            if (!email) {
+                console.log("Email not found for cancellation event");
+                return new Response(JSON.stringify({ message: "Email not found" }), {
+                    headers: { ...corsHeaders, "Content-Type": "application/json" },
+                });
+            }
+
+            // Query profiles directly to avoid pagination limits
             const { data: profile } = await supabaseAdmin
                 .from("profiles")
-                .select("id")
+                .select("id, status")
                 .eq("email", email)
                 .single();
 
             if (profile) {
-                // STRATEGY CHANGE: Delete the user entirely to ensure they cannot log in
-                const { error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(profile.id);
+                // BLOCK the user instead of deleting
+                const { error: updateError } = await supabaseAdmin
+                    .from("profiles")
+                    .update({ status: "BLOCKED" })
+                    .eq("id", profile.id);
 
-                if (deleteError) {
-                    console.error(`Error deleting user ${email}:`, deleteError);
+                if (updateError) {
+                    console.error(`Error blocking user ${email}:`, updateError);
                 } else {
-                    console.log(`Deleted user: ${email} (ID: ${profile.id}) due to event: ${event}`);
+                    console.log(`Blocked user: ${email} (ID: ${profile.id}) due to event: ${event}`);
                 }
             } else {
                 console.log(`User not found for cancellation: ${email}`);

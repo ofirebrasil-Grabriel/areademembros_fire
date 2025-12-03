@@ -23,11 +23,27 @@ export const Login: React.FC = () => {
     setError(null);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
       if (error) throw error;
+
+      // Check if user is BLOCKED
+      if (data.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('status')
+          .eq('id', data.user.id)
+          .single();
+
+        if (profile?.status === 'BLOCKED') {
+          // Sign out immediately
+          await supabase.auth.signOut();
+          throw new Error('Seu acesso foi bloqueado. Entre em contato com o suporte.');
+        }
+      }
+
       navigate('/');
     } catch (err: any) {
       setError(err.message);
