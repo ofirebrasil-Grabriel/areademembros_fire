@@ -37,57 +37,32 @@ const App: React.FC = () => {
   const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
-    const checkProfile = async (uid: string) => {
-      console.log("Checking profile for:", uid);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('must_change_password, status')
-        .eq('id', uid)
-        .single();
+    // Simple timeout to prevent infinite loading
+    const timeout = setTimeout(() => {
+      console.warn("Session check timed out");
+      setLoading(false);
+    }, 3000);
 
-      console.log("Profile data:", data);
-      console.log("Profile error:", error);
-
-      if (data?.status === 'BLOCKED') {
-        console.log("User is BLOCKED. Signing out...");
-        await supabase.auth.signOut();
-        setSession(null);
-        alert('Sua conta está bloqueada. Entre em contato com o suporte.');
-        return;
-      }
-
-      if (data?.must_change_password) {
-        setMustChangePassword(true);
-      } else {
-        setMustChangePassword(false);
-      }
-    };
-
-    // 1. Check active Supabase session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
+    // Simple session check - no complex validation
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
         setSession(session);
-        await checkProfile(session.user.id);
-      }
-      setLoading(false);
-    }).catch(err => {
-      console.error("Supabase session error:", err);
-      setLoading(false);
-    });
+        clearTimeout(timeout);
+        setLoading(false);
+      })
+      .catch(() => {
+        clearTimeout(timeout);
+        setLoading(false);
+      });
 
-    // 2. Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
-        await checkProfile(session.user.id);
-      }
-      setLoading(false);
     });
 
     return () => {
       subscription.unsubscribe();
+      clearTimeout(timeout);
     };
   }, []);
 

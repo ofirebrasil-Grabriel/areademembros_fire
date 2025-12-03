@@ -15,31 +15,55 @@ export const Dashboard: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchData = async () => {
-      setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-      const userId = user?.id || 'mock-user-id';
+      try {
+        setLoading(true);
 
-      // Simulate First Login check
-      const lastLogin = localStorage.getItem('fire_last_login');
-      if (!lastLogin) {
-        setShowWelcome(true);
-        localStorage.setItem('fire_last_login', new Date().toISOString());
+        // Safety timeout for data fetching
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error("Request timed out")), 10000)
+        );
+
+        const { data: { user } } = await supabase.auth.getUser();
+        const userId = user?.id || 'mock-user-id';
+
+        // Simulate First Login check
+        const lastLogin = localStorage.getItem('fire_last_login');
+        if (!lastLogin) {
+          setShowWelcome(true);
+          localStorage.setItem('fire_last_login', new Date().toISOString());
+        }
+
+        const [daysData, progressData, eventsData] = await Promise.race([
+          Promise.all([
+            getDays(),
+            getUserProgress(userId),
+            getUpcomingEvents()
+          ]),
+          timeoutPromise
+        ]) as [ChallengeDay[], string[], CommunityEvent[]];
+
+        if (isMounted) {
+          setCompletedTasks(progressData || []);
+          setDays(daysData || []);
+          setEvents(eventsData || []);
+          setLoading(false);
+        }
+      } catch (error) {
+        console.error("Dashboard loading error:", error);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
-
-      const [daysData, progressData, eventsData] = await Promise.all([
-        getDays(),
-        getUserProgress(userId),
-        getUpcomingEvents()
-      ]);
-
-      setCompletedTasks(progressData);
-      setDays(daysData);
-      setEvents(eventsData);
-      setLoading(false);
     };
 
     fetchData();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const getDayStatus = (index: number) => {
@@ -69,6 +93,44 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col h-64 items-center justify-center text-white gap-4">
         <div className="w-12 h-12 border-4 border-fire-orange border-t-transparent rounded-full animate-spin"></div>
         <p className="text-fire-gray animate-pulse">Carregando sua jornada...</p>
+      </div>
+    );
+  }
+
+  // Error State / Empty State
+  if (days.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[60vh] text-center px-4">
+        <div className="bg-fire-secondary/50 p-6 rounded-full mb-6">
+          <Flame size={48} className="text-fire-orange opacity-50" />
+        </div>
+        <h2 className="text-2xl font-bold text-white mb-2">Não foi possível carregar os dados</h2>
+        <p className="text-fire-gray mb-8 max-w-md">
+          Ocorreu um erro ao conectar com o servidor ou sua sessão expirou.
+        </p>
+        <div className="flex gap-4">
+          <button
+            onClick={() => window.location.reload()}
+            className="px-6 py-2 bg-fire-secondary hover:bg-fire-secondary/80 text-white rounded-lg font-medium transition-colors"
+          >
+            Tentar Novamente
+          </button>
+          <button
+            onClick={async () => {
+              try {
+                await supabase.auth.signOut();
+              } catch (e) {
+                console.error("Logout error:", e);
+              } finally {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="px-6 py-2 bg-fire-orange hover:bg-fire-orange/80 text-white rounded-lg font-medium transition-colors"
+          >
+            Sair da Conta
+          </button>
+        </div>
       </div>
     );
   }

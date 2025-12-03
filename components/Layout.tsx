@@ -36,9 +36,17 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
   }, [location.pathname]);
 
   const handleLogout = async () => {
-    // Standard supabase logout
-    await supabase.auth.signOut();
-    navigate('/login');
+    try {
+      // Attempt standard logout
+      await supabase.auth.signOut();
+    } catch (error) {
+      console.error("Logout error:", error);
+    } finally {
+      // Force local cleanup regardless of server response
+      localStorage.clear(); // Clear all local storage (Supabase tokens, etc.)
+      navigate('/login');
+      window.location.reload(); // Force a hard reload to clear any in-memory state
+    }
   };
 
 
