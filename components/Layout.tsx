@@ -84,7 +84,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
       `}>
         <div className="h-full flex flex-col">
           <div className="p-8 flex items-center justify-center border-b border-fire-secondary/50">
-            <img src="/logo.svg" alt="FIRE Logo" className="h-12 w-auto" />
+            <img src="/logo.svg" alt="FIRE Logo" className="h-12 w-auto" width="66" height="48" />
           </div>
 
           <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">
