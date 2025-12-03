@@ -42,7 +42,9 @@ export interface ChallengeDay {
   title: string;
   description: string;
   morning_message?: string;
+  morning_audio_url?: string;
   fire_concept?: string;
+  fire_audio_url?: string;
   expected_result?: string;
   reflection_prompt?: string;
   tasks: ChallengeTask[];

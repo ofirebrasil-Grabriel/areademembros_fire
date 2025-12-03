@@ -4,13 +4,13 @@ import { getDays, getUserProgress, toggleTaskCompletion, getUserNote, saveUserNo
 import { ChallengeDay, ChallengeTask } from '../types';
 import { Button } from '../components/Button';
 import { VideoPlayer } from '../components/VideoPlayer';
-import { 
-  ArrowLeft, 
-  CheckSquare, 
-  Download, 
-  Video, 
-  FileText, 
-  MessageCircle, 
+import {
+  ArrowLeft,
+  CheckSquare,
+  Download,
+  Video,
+  FileText,
+  MessageCircle,
   Link as LinkIcon,
   ChevronRight,
   ChevronLeft,
@@ -37,12 +37,12 @@ export const DayView: React.FC = () => {
   const [completedTasks, setCompletedTasks] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [isLocked, setIsLocked] = useState(false);
-  
+
   // Note State
   const [userNote, setUserNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
-  
+
   // Commitment State (Local UI state)
   const [committed, setCommitted] = useState(false);
 
@@ -52,11 +52,11 @@ export const DayView: React.FC = () => {
       window.scrollTo(0, 0);
       const days = await getDays();
       const dayNum = Number(id);
-      
+
       const currentDay = days.find(d => d.day_number === dayNum);
       const prev = days.find(d => d.day_number === dayNum - 1);
       const next = days.find(d => d.day_number === dayNum + 1);
-      
+
       setPrevDay(prev || null);
       setNextDay(next || null);
 
@@ -64,7 +64,7 @@ export const DayView: React.FC = () => {
         setDay(currentDay);
         const { data: { user } } = await supabase.auth.getUser();
         const userId = user?.id || 'mock-user-id';
-        
+
         // Parallel Fetch
         const [progress, note] = await Promise.all([
           getUserProgress(userId),
@@ -73,7 +73,7 @@ export const DayView: React.FC = () => {
 
         setCompletedTasks(progress);
         setUserNote(note);
-        
+
         // Auto-set committed if tasks are started
         if (progress.some(pid => currentDay.tasks.some(t => t.id === pid))) {
           setCommitted(true);
@@ -110,7 +110,7 @@ export const DayView: React.FC = () => {
       setCompletedTasks(prev => prev.filter(id => id !== taskId));
     } else {
       setCompletedTasks(prev => [...prev, taskId]);
-      setCommitted(true); 
+      setCommitted(true);
     }
 
     await toggleTaskCompletion(userId, taskId, !isCompleted);
@@ -121,9 +121,9 @@ export const DayView: React.FC = () => {
     setSavingNote(true);
     const { data: { user } } = await supabase.auth.getUser();
     const userId = user?.id || 'mock-user-id';
-    
+
     await saveUserNote(userId, day.id, userNote);
-    
+
     setSavingNote(false);
     setNoteSaved(true);
     setTimeout(() => setNoteSaved(false), 2000);
@@ -147,22 +147,22 @@ export const DayView: React.FC = () => {
       </div>
     </div>
   );
-  
+
   if (!day) return <div className="p-8 text-white">Dia não encontrado.</div>;
 
   const progress = calculateProgress();
   const isDayComplete = progress === 100;
-  
+
   const videoResources = day.resources.filter(r => r.type === 'video');
   const otherResources = day.resources.filter(r => r.type !== 'video');
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 md:space-y-12 pb-32">
-      
+
       {/* HEADER NAVIGATION */}
       <div className="sticky top-0 z-30 bg-fire-dark/95 backdrop-blur-md py-4 border-b border-white/5 -mx-6 px-6 md:mx-0 md:px-0 md:static md:bg-transparent md:border-none">
         <div className="flex items-center justify-between mb-2">
-          <button 
+          <button
             onClick={() => navigate('/')}
             className="group flex items-center text-fire-gray hover:text-white transition-colors text-sm font-medium"
           >
@@ -171,7 +171,7 @@ export const DayView: React.FC = () => {
             </div>
             Voltar
           </button>
-          
+
           <div className="text-right">
             <div className="flex items-center justify-end gap-3">
               <span className="text-xs font-bold text-fire-orange tracking-widest uppercase">
@@ -183,16 +183,16 @@ export const DayView: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         {/* Progress Bar */}
         <div className="flex items-center gap-3">
-           <div className="flex-1 h-2 bg-fire-secondary rounded-full overflow-hidden">
-              <div 
-                className={`h-full transition-all duration-700 ease-out ${isDayComplete ? 'bg-green-500' : 'bg-fire-orange'}`} 
-                style={{ width: `${progress}%` }}
-              ></div>
-           </div>
-           <span className="text-xs font-bold text-white min-w-[3rem] text-right">{progress}%</span>
+          <div className="flex-1 h-2 bg-fire-secondary rounded-full overflow-hidden">
+            <div
+              className={`h-full transition-all duration-700 ease-out ${isDayComplete ? 'bg-green-500' : 'bg-fire-orange'}`}
+              style={{ width: `${progress}%` }}
+            ></div>
+          </div>
+          <span className="text-xs font-bold text-white min-w-[3rem] text-right">{progress}%</span>
         </div>
       </div>
 
@@ -227,18 +227,25 @@ export const DayView: React.FC = () => {
       ) : (
         /* UNLOCKED CONTENT */
         <div className="space-y-12 animate-in fade-in duration-500">
-          
+
           {/* 1. MENSAGEM MATINAL */}
           <section className="bg-gradient-to-br from-fire-secondary/30 to-fire-dark border border-white/5 rounded-2xl p-6 md:p-8 relative overflow-hidden group hover:border-fire-orange/20 transition-all">
             <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:opacity-20 transition-opacity pointer-events-none">
-               <Sun size={100} className="text-yellow-500" />
+              <Sun size={100} className="text-yellow-500" />
             </div>
             <h2 className="text-xl font-bold text-white mb-6 font-montserrat flex items-center gap-3">
               <span className="bg-yellow-500/20 text-yellow-400 p-2 rounded-lg"><Sun size={20} /></span>
               Mensagem Matinal
             </h2>
-            <div className="prose prose-invert prose-lg text-fire-light/90 leading-relaxed font-light italic border-l-4 border-yellow-500/30 pl-6">
-              "{day.morning_message}"
+            <div className="space-y-4">
+              {day.morning_audio_url && (
+                <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                  <audio controls className="w-full h-10" src={day.morning_audio_url} />
+                </div>
+              )}
+              <div className="prose prose-invert prose-lg text-fire-light/90 leading-relaxed font-light italic border-l-4 border-yellow-500/30 pl-6">
+                "{day.morning_message}"
+              </div>
             </div>
           </section>
 
@@ -249,10 +256,15 @@ export const DayView: React.FC = () => {
               <span className="bg-fire-orange/20 text-fire-orange p-2 rounded-lg"><Flame size={20} /></span>
               Conceito FIRE do Dia
             </h2>
-            <div className="bg-fire-secondary/20 p-6 rounded-xl border border-white/5 relative z-10">
-               <p className="text-lg font-medium text-white text-center md:text-left leading-relaxed">
-                 {day.fire_concept}
-               </p>
+            <div className="bg-fire-secondary/20 p-6 rounded-xl border border-white/5 relative z-10 space-y-4">
+              {day.fire_audio_url && (
+                <div className="bg-black/20 p-4 rounded-xl border border-white/5">
+                  <audio controls className="w-full h-10" src={day.fire_audio_url} />
+                </div>
+              )}
+              <p className="text-lg font-medium text-white text-center md:text-left leading-relaxed">
+                {day.fire_concept}
+              </p>
             </div>
           </section>
 
@@ -262,7 +274,7 @@ export const DayView: React.FC = () => {
               <Target className="text-fire-orange" size={28} />
               Seu Desafio Hoje
             </h2>
-            
+
             {/* Video Player */}
             {videoResources.length > 0 && (
               <div className="grid gap-6">
@@ -273,10 +285,10 @@ export const DayView: React.FC = () => {
             )}
 
             <div className="bg-fire-secondary/10 border border-white/10 rounded-xl p-6 text-fire-light leading-relaxed">
-               <p>
-                 Hoje vamos focar em: <span className="text-white font-bold">{day.description}</span>. 
-                 Siga o passo a passo abaixo para completar esta etapa da sua liberdade financeira.
-               </p>
+              <p>
+                Hoje vamos focar em: <span className="text-white font-bold">{day.description}</span>.
+                Siga o passo a passo abaixo para completar esta etapa da sua liberdade financeira.
+              </p>
             </div>
           </section>
 
@@ -295,13 +307,13 @@ export const DayView: React.FC = () => {
               {day.tasks.map((task, index) => {
                 const isDone = completedTasks.includes(task.id);
                 return (
-                  <div 
+                  <div
                     key={task.id}
                     onClick={() => handleTaskToggle(task.id)}
                     className={`
                       relative group flex items-start gap-4 p-4 rounded-xl cursor-pointer transition-all border
-                      ${isDone 
-                        ? 'bg-green-500/5 border-green-500/20 shadow-[0_0_15px_-5px_rgba(34,197,94,0.3)]' 
+                      ${isDone
+                        ? 'bg-green-500/5 border-green-500/20 shadow-[0_0_15px_-5px_rgba(34,197,94,0.3)]'
                         : 'bg-white/5 border-transparent hover:bg-white/10 hover:border-white/20 hover:shadow-lg'}
                     `}
                   >
@@ -344,16 +356,16 @@ export const DayView: React.FC = () => {
                 {otherResources.map(res => {
                   const Icon = res.type === 'pdf' ? FileText
                     : res.type === 'sheet' ? Download
-                    : res.type === 'community' ? MessageCircle
-                    : LinkIcon;
-                  
+                      : res.type === 'community' ? MessageCircle
+                        : LinkIcon;
+
                   const colorClass = res.type === 'sheet' ? 'text-green-400 bg-green-400/10'
                     : res.type === 'pdf' ? 'text-red-400 bg-red-400/10'
-                    : res.type === 'community' ? 'text-blue-400 bg-blue-400/10'
-                    : 'text-fire-gray bg-white/10';
+                      : res.type === 'community' ? 'text-blue-400 bg-blue-400/10'
+                        : 'text-fire-gray bg-white/10';
 
                   return (
-                    <a 
+                    <a
                       key={res.id}
                       href={res.url}
                       target="_blank"
@@ -368,7 +380,7 @@ export const DayView: React.FC = () => {
                         <span className="text-xs text-fire-gray uppercase tracking-wider">{res.type}</span>
                       </div>
                       <div className="ml-auto opacity-0 group-hover:opacity-100 transition-opacity">
-                         <Download size={16} className="text-fire-gray" />
+                        <Download size={16} className="text-fire-gray" />
                       </div>
                     </a>
                   );
@@ -379,15 +391,15 @@ export const DayView: React.FC = () => {
 
           {/* 6. RESULTADO ESPERADO */}
           <section className="bg-blue-900/10 border border-blue-500/20 rounded-xl p-6 flex items-start gap-4">
-             <div className="bg-blue-500/20 p-3 rounded-full shrink-0">
-               <Target size={24} className="text-blue-400" />
-             </div>
-             <div>
-               <h3 className="text-blue-200 font-bold mb-1 uppercase text-xs tracking-wider">Resultado Esperado</h3>
-               <p className="text-white font-medium italic">
-                 "{day.expected_result}"
-               </p>
-             </div>
+            <div className="bg-blue-500/20 p-3 rounded-full shrink-0">
+              <Target size={24} className="text-blue-400" />
+            </div>
+            <div>
+              <h3 className="text-blue-200 font-bold mb-1 uppercase text-xs tracking-wider">Resultado Esperado</h3>
+              <p className="text-white font-medium italic">
+                "{day.expected_result}"
+              </p>
+            </div>
           </section>
 
           {/* 7. REFLEXÃO GUIADA */}
@@ -397,27 +409,27 @@ export const DayView: React.FC = () => {
               Reflexão Guiada
             </h2>
             <div className="bg-gradient-to-br from-fire-secondary/20 to-fire-dark border border-white/10 rounded-2xl p-6 md:p-8">
-               <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
-                  <p className="text-lg text-white font-medium max-w-2xl">{day.reflection_prompt}</p>
-                  <button 
-                    onClick={handleSaveNote}
-                    disabled={savingNote}
-                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap
-                      ${noteSaved 
-                        ? 'bg-green-500/20 text-green-400' 
-                        : 'bg-white/5 text-fire-gray hover:bg-fire-orange/10 hover:text-fire-orange'}
+              <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
+                <p className="text-lg text-white font-medium max-w-2xl">{day.reflection_prompt}</p>
+                <button
+                  onClick={handleSaveNote}
+                  disabled={savingNote}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap
+                      ${noteSaved
+                      ? 'bg-green-500/20 text-green-400'
+                      : 'bg-white/5 text-fire-gray hover:bg-fire-orange/10 hover:text-fire-orange'}
                     `}
-                  >
-                    {noteSaved ? <CheckCircle size={16} /> : <Save size={16} />}
-                    {noteSaved ? 'Salvo' : savingNote ? 'Salvando...' : 'Salvar Anotação'}
-                  </button>
-               </div>
-               <textarea 
-                 value={userNote}
-                 onChange={(e) => setUserNote(e.target.value)}
-                 className="w-full bg-black/30 border border-white/10 rounded-xl p-6 text-fire-light placeholder-white/20 focus:outline-none focus:border-fire-orange/50 focus:ring-1 focus:ring-fire-orange/50 transition-all h-48 resize-none leading-relaxed"
-                 placeholder="Este é o seu diário de bordo. Escreva seus insights, dificuldades e vitórias de hoje..."
-               ></textarea>
+                >
+                  {noteSaved ? <CheckCircle size={16} /> : <Save size={16} />}
+                  {noteSaved ? 'Salvo' : savingNote ? 'Salvando...' : 'Salvar Anotação'}
+                </button>
+              </div>
+              <textarea
+                value={userNote}
+                onChange={(e) => setUserNote(e.target.value)}
+                className="w-full bg-black/30 border border-white/10 rounded-xl p-6 text-fire-light placeholder-white/20 focus:outline-none focus:border-fire-orange/50 focus:ring-1 focus:ring-fire-orange/50 transition-all h-48 resize-none leading-relaxed"
+                placeholder="Este é o seu diário de bordo. Escreva seus insights, dificuldades e vitórias de hoje..."
+              ></textarea>
             </div>
           </section>
 
@@ -428,24 +440,24 @@ export const DayView: React.FC = () => {
               Compromisso do Dia
             </h2>
             <div className="text-center w-full max-w-md">
-               {!committed ? (
-                 <Button 
-                   size="lg" 
-                   fullWidth
-                   onClick={() => setCommitted(true)}
-                   className="animate-pulse shadow-[0_0_20px_rgba(255,102,0,0.4)]"
-                 >
-                   Eu me comprometo a executar!
-                 </Button>
-               ) : (
-                 <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-500 bg-green-500/10 p-6 rounded-2xl border border-green-500/20">
-                   <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center text-green-500 mb-2">
-                     <CheckCircle size={24} />
-                   </div>
-                   <p className="text-green-400 font-bold text-lg">Compromisso Firmado!</p>
-                   <p className="text-fire-gray text-sm">Continue completando as tarefas acima.</p>
-                 </div>
-               )}
+              {!committed ? (
+                <Button
+                  size="lg"
+                  fullWidth
+                  onClick={() => setCommitted(true)}
+                  className="animate-pulse shadow-[0_0_20px_rgba(255,102,0,0.4)]"
+                >
+                  Eu me comprometo a executar!
+                </Button>
+              ) : (
+                <div className="flex flex-col items-center gap-2 animate-in fade-in zoom-in duration-500 bg-green-500/10 p-6 rounded-2xl border border-green-500/20">
+                  <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center text-green-500 mb-2">
+                    <CheckCircle size={24} />
+                  </div>
+                  <p className="text-green-400 font-bold text-lg">Compromisso Firmado!</p>
+                  <p className="text-fire-gray text-sm">Continue completando as tarefas acima.</p>
+                </div>
+              )}
             </div>
           </section>
         </div>
@@ -454,33 +466,33 @@ export const DayView: React.FC = () => {
       {/* FOOTER NAVIGATION (Sticky or Fixed) */}
       <div className="fixed bottom-0 left-0 right-0 p-4 bg-fire-dark/95 backdrop-blur-lg border-t border-white/10 z-20 md:static md:bg-transparent md:border-none md:p-0 md:pt-12">
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-           {/* Prev Button */}
-           <Button 
-             variant="secondary"
-             disabled={!prevDay}
-             onClick={() => prevDay && navigateDay(prevDay.day_number)}
-             className="flex-1 md:flex-none flex items-center justify-center gap-2"
-           >
-             <ChevronLeft size={18} />
-             <span className="hidden md:inline">Dia Anterior</span>
-             <span className="md:hidden">Anterior</span>
-           </Button>
+          {/* Prev Button */}
+          <Button
+            variant="secondary"
+            disabled={!prevDay}
+            onClick={() => prevDay && navigateDay(prevDay.day_number)}
+            className="flex-1 md:flex-none flex items-center justify-center gap-2"
+          >
+            <ChevronLeft size={18} />
+            <span className="hidden md:inline">Dia Anterior</span>
+            <span className="md:hidden">Anterior</span>
+          </Button>
 
-           {/* Next Button */}
-           <Button 
-             variant={isDayComplete ? 'primary' : 'outline'}
-             disabled={!nextDay || (!isDayComplete && !isLocked)} // Disable next only if unlocked and incomplete
-             onClick={() => {
-                if (nextDay && isDayComplete) navigateDay(nextDay.day_number);
-                else if (isLocked && nextDay) navigateDay(nextDay.day_number); // Allow skipping if locked (admin testing) or strict mode? No, usually keep strict. 
-                // Strict Logic: Disable next until current is complete
-             }}
-             className={`flex-1 md:flex-none flex items-center justify-center gap-2 min-w-[140px] ${!isDayComplete ? 'opacity-50 cursor-not-allowed' : ''}`}
-           >
-             <span className="hidden md:inline">Próximo Dia</span>
-             <span className="md:hidden">Próximo</span>
-             <ChevronRight size={18} />
-           </Button>
+          {/* Next Button */}
+          <Button
+            variant={isDayComplete ? 'primary' : 'outline'}
+            disabled={!nextDay || (!isDayComplete && !isLocked)} // Disable next only if unlocked and incomplete
+            onClick={() => {
+              if (nextDay && isDayComplete) navigateDay(nextDay.day_number);
+              else if (isLocked && nextDay) navigateDay(nextDay.day_number); // Allow skipping if locked (admin testing) or strict mode? No, usually keep strict. 
+              // Strict Logic: Disable next until current is complete
+            }}
+            className={`flex-1 md:flex-none flex items-center justify-center gap-2 min-w-[140px] ${!isDayComplete ? 'opacity-50 cursor-not-allowed' : ''}`}
+          >
+            <span className="hidden md:inline">Próximo Dia</span>
+            <span className="md:hidden">Próximo</span>
+            <ChevronRight size={18} />
+          </Button>
         </div>
       </div>
 
