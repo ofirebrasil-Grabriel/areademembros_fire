@@ -53,7 +53,7 @@ serve(async (req) => {
         const email = rawEmail ? rawEmail.toLowerCase() : null;
         const name = body.name || body.data?.buyer?.name || "Novo Aluno";
 
-        console.log(`Processing webhook for ${email}, event: ${event}`);
+        console.log(`Processing webhook event: ${event}`);
 
         // Accept PURCHASE_APPROVED, APPROVED, SWITCH_PLAN, and PURCHASE_COMPLETE
         if (event === "PURCHASE_APPROVED" || event === "APPROVED" || event === "SWITCH_PLAN" || event === "PURCHASE_COMPLETE") {
@@ -76,7 +76,7 @@ serve(async (req) => {
                     .update({ status: "ACTIVE" })
                     .eq("id", existingProfile.id);
 
-                console.log(`Updated status to ACTIVE for existing user: ${email}`);
+                console.log(`Updated status to ACTIVE for existing user (ID: ${existingProfile.id})`);
             } else {
                 // Create new user with random password
                 const randomPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-8);
@@ -102,7 +102,7 @@ serve(async (req) => {
                     // Send Password Reset / Invite Email (User can set their own password)
                     await supabaseAdmin.auth.admin.inviteUserByEmail(email);
 
-                    console.log(`Created new user: ${email}`);
+                    console.log(`Created new user (ID: ${newUser.user.id})`);
 
                     // 3. Send Notification to n8n (Welcome Email)
                     const { data: n8nConfig } = await supabaseAdmin
@@ -123,7 +123,7 @@ serve(async (req) => {
                                     event: "USER_CREATED"
                                 })
                             });
-                            console.log(`Sent n8n notification to ${n8nConfig.value}`);
+                            console.log(`Sent n8n notification`);
                         } catch (n8nError) {
                             console.error("Error sending n8n notification:", n8nError);
                         }
@@ -154,12 +154,12 @@ serve(async (req) => {
                     .eq("id", profile.id);
 
                 if (updateError) {
-                    console.error(`Error blocking user ${email}:`, updateError);
+                    console.error(`Error blocking user (ID: ${profile.id}):`, updateError);
                 } else {
-                    console.log(`Blocked user: ${email} (ID: ${profile.id}) due to event: ${event}`);
+                    console.log(`Blocked user (ID: ${profile.id}) due to event: ${event}`);
                 }
             } else {
-                console.log(`User not found for cancellation: ${email}`);
+                console.log(`User not found for cancellation event`);
             }
         }
 

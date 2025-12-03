@@ -11,8 +11,12 @@ const getEnvVar = (key: string, fallback: string): string => {
   }
 };
 
-const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', 'https://lvunwfscdkpuwjuaqgmt.supabase.co');
-const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx2dW53ZnNjZGtwdXdqdWFxZ210Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQxMDg3MTEsImV4cCI6MjA3OTY4NDcxMX0.3jekZ3Y6RlJHc3SFsnEy_gXabV_rKrTyb_Qdjm7qONY');
+const supabaseUrl = getEnvVar('VITE_SUPABASE_URL', '');
+const supabaseAnonKey = getEnvVar('VITE_SUPABASE_ANON_KEY', '');
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables. Please check your .env file.');
+}
 
 // Create a single supabase client for interacting with your database
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);

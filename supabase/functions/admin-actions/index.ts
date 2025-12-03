@@ -35,8 +35,6 @@ serve(async (req) => {
             .eq('id', user.id)
             .single();
 
-        console.log("Profile found:", profile);
-
         if (!profile || profile.role !== 'admin') {
             console.error("Forbidden: Role is", profile?.role);
             throw new Error("Forbidden: Admins only");
