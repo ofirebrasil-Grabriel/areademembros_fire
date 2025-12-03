@@ -189,7 +189,6 @@ export const Dashboard: React.FC = () => {
             <h3 className="text-xl font-bold text-white mb-2">Bem-vindo ao Desafio FIRE 15 Dias!</h3>
             <p className="text-fire-light text-sm mb-4">
               Estamos felizes em ter você aqui. Sua jornada para a liberdade financeira começa agora.
-              Assista ao vídeo de introdução ou vá direto para o Dia 1.
             </p>
             <button
               onClick={() => setShowWelcome(false)}

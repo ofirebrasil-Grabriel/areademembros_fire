@@ -37,27 +37,91 @@ const App: React.FC = () => {
   const [mustChangePassword, setMustChangePassword] = useState(false);
 
   useEffect(() => {
-    // Simple timeout to prevent infinite loading
+    // Safety timeout
     const timeout = setTimeout(() => {
       console.warn("Session check timed out");
       setLoading(false);
-    }, 3000);
+    }, 5000);
 
-    // Simple session check - no complex validation
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
+    const validateAndLoad = async () => {
+      try {
+        // Step 1: Check session
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session) {
+          // No session - go to login
+          setSession(null);
+          setLoading(false);
+          clearTimeout(timeout);
+          return;
+        }
+
+        // Step 2: Verify profile exists and check status
+        const { data: profile, error } = await supabase
+          .from('profiles')
+          .select('must_change_password, status')
+          .eq('id', session.user.id)
+          .single();
+
+        // Step 3: Handle invalid profile or BLOCKED status
+        if (error || !profile) {
+          console.warn("Profile not found - user was deleted");
+          localStorage.clear();
+          window.location.href = '#/login';
+          return;
+        }
+
+        if (profile.status === 'BLOCKED') {
+          console.warn("User is BLOCKED");
+          alert('Seu acesso foi bloqueado. Entre em contato com o suporte.');
+          localStorage.clear();
+          window.location.href = '#/login';
+          return;
+        }
+
+        // Step 4: Set flags
+        setMustChangePassword(profile.must_change_password || false);
         setSession(session);
-        clearTimeout(timeout);
+
+        // Step 5: Done - release the page
         setLoading(false);
-      })
-      .catch(() => {
         clearTimeout(timeout);
+
+      } catch (err) {
+        console.error("Validation error:", err);
         setLoading(false);
-      });
+        clearTimeout(timeout);
+      }
+    };
+
+    validateAndLoad();
 
     // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (!session) {
+        setSession(null);
+        setMustChangePassword(false);
+        return;
+      }
+
+      // Re-validate on auth change
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('must_change_password, status')
+        .eq('id', session.user.id)
+        .single();
+
+      if (profile?.status === 'BLOCKED' || !profile) {
+        if (profile?.status === 'BLOCKED') {
+          alert('Seu acesso foi bloqueado. Entre em contato com o suporte.');
+        }
+        localStorage.clear();
+        window.location.href = '#/login';
+        return;
+      }
+
       setSession(session);
+      setMustChangePassword(profile.must_change_password || false);
     });
 
     return () => {
