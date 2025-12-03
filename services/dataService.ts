@@ -250,6 +250,35 @@ export const saveUserNote = async (userId: string, dayId: string, content: strin
     });
 };
 
+export const getUserReflectionAnswers = async (userId: string, reflectionIds: string[]): Promise<Record<string, string>> => {
+  if (reflectionIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('user_reflection_answers')
+    .select('reflection_id, answer')
+    .eq('user_id', userId)
+    .in('reflection_id', reflectionIds);
+
+  if (error || !data) return {};
+
+  const answers: Record<string, string> = {};
+  data.forEach((item: any) => {
+    answers[item.reflection_id] = item.answer;
+  });
+  return answers;
+};
+
+export const saveUserReflectionAnswer = async (userId: string, reflectionId: string, answer: string) => {
+  await supabase
+    .from('user_reflection_answers')
+    .upsert({
+      user_id: userId,
+      reflection_id: reflectionId,
+      answer,
+      updated_at: new Date().toISOString()
+    });
+};
+
 // --- USER MANAGEMENT SERVICES ---
 
 export const getCurrentUserProfile = async (): Promise<UserProfile | null> => {

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getDays, getUserProgress, toggleTaskCompletion, getUserNote, saveUserNote } from '../services/dataService';
+import { getDays, getUserProgress, toggleTaskCompletion, getUserNote, saveUserNote, getUserReflectionAnswers, saveUserReflectionAnswer } from '../services/dataService';
 import { ChallengeDay, ChallengeTask } from '../types';
 import { Button } from '../components/Button';
 import { VideoPlayer } from '../components/VideoPlayer';
@@ -25,7 +25,8 @@ import {
   Handshake,
   Calendar,
   Lock,
-  AlertTriangle
+  AlertTriangle,
+  Loader2
 } from 'lucide-react';
 import { supabase } from '../services/supabaseClient';
 
@@ -47,6 +48,10 @@ export const DayView: React.FC = () => {
   const [userNote, setUserNote] = useState('');
   const [savingNote, setSavingNote] = useState(false);
   const [noteSaved, setNoteSaved] = useState(false);
+
+  // New state for reflection answers
+  const [reflectionAnswers, setReflectionAnswers] = useState<Record<string, string>>({});
+  const [savingReflections, setSavingReflections] = useState<Record<string, boolean>>({});
 
   // Commitment State (Local UI state)
   const [committed, setCommitted] = useState(false);
@@ -71,13 +76,17 @@ export const DayView: React.FC = () => {
         const userId = user?.id || 'mock-user-id';
 
         // Parallel Fetch
-        const [progress, note] = await Promise.all([
+        const [progress, note, reflectionAnswersData] = await Promise.all([
           getUserProgress(userId),
-          getUserNote(userId, currentDay.id)
+          getUserNote(userId, currentDay.id),
+          currentDay.reflections && currentDay.reflections.length > 0
+            ? getUserReflectionAnswers(userId, currentDay.reflections.map(r => r.id))
+            : Promise.resolve({})
         ]);
 
         setCompletedTasks(progress);
         setUserNote(note);
+        setReflectionAnswers(reflectionAnswersData);
 
         // Auto-set committed if tasks are started
         if (progress.some(pid => currentDay.tasks.some(t => t.id === pid))) {
@@ -132,6 +141,25 @@ export const DayView: React.FC = () => {
     setSavingNote(false);
     setNoteSaved(true);
     setTimeout(() => setNoteSaved(false), 2000);
+  };
+
+  const handleReflectionChange = (id: string, value: string) => {
+    setReflectionAnswers(prev => ({ ...prev, [id]: value }));
+  };
+
+  const handleSaveReflection = async (id: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setSavingReflections(prev => ({ ...prev, [id]: true }));
+    try {
+      await saveUserReflectionAnswer(user.id, id, reflectionAnswers[id]);
+    } catch (error) {
+      console.error('Error saving reflection', error);
+    } finally {
+      setTimeout(() => {
+        setSavingReflections(prev => ({ ...prev, [id]: false }));
+      }, 500);
+    }
   };
 
   const calculateProgress = () => {
@@ -324,10 +352,14 @@ export const DayView: React.FC = () => {
             )}
 
             <div className="bg-fire-secondary/10 border border-white/10 rounded-xl p-6 text-fire-light leading-relaxed">
-              <p>
+              <p className="mb-4">
                 Hoje vamos focar em: <span className="text-white font-bold">{day.description}</span>.
-                Siga o passo a passo abaixo para completar esta etapa da sua liberdade financeira.
               </p>
+              {day.challenge_details && (
+                <div className="whitespace-pre-wrap text-white/90 font-medium border-t border-white/10 pt-4 mt-4">
+                  {day.challenge_details}
+                </div>
+              )}
             </div>
           </section>
 
@@ -447,40 +479,61 @@ export const DayView: React.FC = () => {
               <BrainCircuit className="text-purple-400" size={24} />
               Reflexão Guiada
             </h2>
-            <div className="bg-gradient-to-br from-fire-secondary/20 to-fire-dark border border-white/10 rounded-2xl p-6 md:p-8">
-              <div className="flex flex-col md:flex-row justify-between items-start mb-6 gap-4">
-                <div className="space-y-3 w-full">
-                  {day.reflections && day.reflections.length > 0 ? (
-                    <ul className="space-y-2 list-disc list-inside text-lg text-white font-medium">
-                      {day.reflections.map((ref) => (
-                        <li key={ref.id} className="leading-relaxed">
-                          {ref.question}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-lg text-white font-medium max-w-2xl">{day.reflection_prompt}</p>
-                  )}
+            <div className="bg-gradient-to-br from-fire-secondary/20 to-fire-dark border border-white/10 rounded-2xl p-6 md:p-8 space-y-8">
+              {day.reflections && day.reflections.length > 0 ? (
+                day.reflections.map((ref) => (
+                  <div key={ref.id} className="space-y-3">
+                    <p className="text-lg text-white font-medium leading-relaxed flex items-start gap-2">
+                      <span className="text-fire-orange mt-1">•</span>
+                      {ref.question}
+                    </p>
+                    <div className="relative">
+                      <textarea
+                        value={reflectionAnswers[ref.id] || ''}
+                        onChange={(e) => handleReflectionChange(ref.id, e.target.value)}
+                        onBlur={() => handleSaveReflection(ref.id)}
+                        className="w-full bg-black/30 border border-white/10 rounded-xl p-4 text-fire-light placeholder-white/20 focus:outline-none focus:border-fire-orange/50 focus:ring-1 focus:ring-fire-orange/50 transition-all h-32 resize-none leading-relaxed"
+                        placeholder="Sua resposta..."
+                      />
+                      <div className="absolute bottom-4 right-4 flex items-center gap-2">
+                        {savingReflections[ref.id] && (
+                          <span className="text-xs text-fire-gray flex items-center gap-1">
+                            <Loader2 size={12} className="animate-spin" /> Salvando...
+                          </span>
+                        )}
+                        {!savingReflections[ref.id] && reflectionAnswers[ref.id] && (
+                          <span className="text-xs text-green-400 flex items-center gap-1">
+                            <CheckCircle size={12} /> Salvo
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                // Fallback for old single prompt
+                <div className="space-y-4">
+                  <p className="text-lg text-white font-medium max-w-2xl">{day.reflection_prompt}</p>
+                  <textarea
+                    value={userNote}
+                    onChange={(e) => setUserNote(e.target.value)}
+                    className="w-full bg-black/30 border border-white/10 rounded-xl p-6 text-fire-light placeholder-white/20 focus:outline-none focus:border-fire-orange/50 focus:ring-1 focus:ring-fire-orange/50 transition-all h-48 resize-none leading-relaxed"
+                    placeholder="Este é o seu diário de bordo. Escreva seus insights, dificuldades e vitórias de hoje..."
+                  />
+                  <button
+                    onClick={handleSaveNote}
+                    disabled={savingNote}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap ml-auto
+                                ${noteSaved
+                        ? 'bg-green-500/20 text-green-400'
+                        : 'bg-white/5 text-fire-gray hover:bg-fire-orange/10 hover:text-fire-orange'}
+                                `}
+                  >
+                    {noteSaved ? <CheckCircle size={16} /> : <Save size={16} />}
+                    {noteSaved ? 'Salvo' : savingNote ? 'Salvando...' : 'Salvar Anotação'}
+                  </button>
                 </div>
-                <button
-                  onClick={handleSaveNote}
-                  disabled={savingNote}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all whitespace-nowrap shrink-0
-                      ${noteSaved
-                      ? 'bg-green-500/20 text-green-400'
-                      : 'bg-white/5 text-fire-gray hover:bg-fire-orange/10 hover:text-fire-orange'}
-                    `}
-                >
-                  {noteSaved ? <CheckCircle size={16} /> : <Save size={16} />}
-                  {noteSaved ? 'Salvo' : savingNote ? 'Salvando...' : 'Salvar Anotação'}
-                </button>
-              </div>
-              <textarea
-                value={userNote}
-                onChange={(e) => setUserNote(e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-xl p-6 text-fire-light placeholder-white/20 focus:outline-none focus:border-fire-orange/50 focus:ring-1 focus:ring-fire-orange/50 transition-all h-48 resize-none leading-relaxed"
-                placeholder="Este é o seu diário de bordo. Escreva seus insights, dificuldades e vitórias de hoje..."
-              ></textarea>
+              )}
             </div>
           </section>
 
@@ -490,6 +543,13 @@ export const DayView: React.FC = () => {
               <Handshake size={20} />
               Compromisso do Dia
             </h2>
+
+            {day.commitment_text && (
+              <div className="max-w-2xl text-center whitespace-pre-wrap text-white/80 leading-relaxed italic border-l-4 border-fire-orange/30 pl-4">
+                {day.commitment_text}
+              </div>
+            )}
+
             <div className="text-center w-full max-w-md">
               {!committed ? (
                 <Button
@@ -511,6 +571,20 @@ export const DayView: React.FC = () => {
               )}
             </div>
           </section>
+
+          {/* 9. NEXT DAY TEASER */}
+          {day.next_day_teaser && (
+            <section className="bg-black/40 border border-white/10 rounded-xl p-6 md:p-8">
+              <h3 className="text-lg font-bold text-fire-orange mb-3 flex items-center gap-2">
+                <Calendar size={20} />
+                Amanhã
+              </h3>
+              <p className="text-white/80 leading-relaxed whitespace-pre-wrap">
+                {day.next_day_teaser}
+              </p>
+            </section>
+          )}
+
         </div>
       )}
 

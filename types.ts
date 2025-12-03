@@ -47,6 +47,9 @@ export interface ChallengeDay {
   fire_audio_url?: string;
   expected_result?: string;
   reflection_prompt?: string; // Deprecated, keeping for backward compatibility
+  challenge_details?: string;
+  commitment_text?: string;
+  next_day_teaser?: string;
   tasks: ChallengeTask[];
   resources: ChallengeResource[];
   reflections: ChallengeReflection[];

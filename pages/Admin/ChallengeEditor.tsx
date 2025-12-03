@@ -260,7 +260,10 @@ export const ChallengeEditor: React.FC = () => {
         fire_concept: day.fire_concept,
         fire_audio_url: day.fire_audio_url,
         expected_result: day.expected_result,
-        // reflection_prompt: day.reflection_prompt // Removed as it's now a list
+        reflection_prompt: day.reflection_prompt,
+        challenge_details: day.challenge_details,
+        commitment_text: day.commitment_text,
+        next_day_teaser: day.next_day_teaser
       };
 
       let dayId = day.id;
@@ -376,12 +379,23 @@ export const ChallengeEditor: React.FC = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-fire-gray mb-1">Descrição</label>
+                <label className="block text-sm font-medium text-fire-gray mb-1">Descrição Curta</label>
                 <textarea
                   value={day.description}
                   onChange={(e) => handleDayChange('description', e.target.value)}
                   rows={2}
                   className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none resize-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-fire-gray mb-1">Detalhes do Desafio (Texto Longo)</label>
+                <textarea
+                  value={day.challenge_details || ''}
+                  onChange={(e) => handleDayChange('challenge_details', e.target.value)}
+                  rows={4}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
+                  placeholder="Ex: #**Seu desafio hoje: Mapeamento completo...**"
                 />
               </div>
 
@@ -428,6 +442,28 @@ export const ChallengeEditor: React.FC = () => {
                   onChange={(e) => handleDayChange('fire_concept', e.target.value)}
                   rows={3}
                   className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-fire-gray mb-1">Texto do Compromisso</label>
+                <textarea
+                  value={day.commitment_text || ''}
+                  onChange={(e) => handleDayChange('commitment_text', e.target.value)}
+                  rows={3}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
+                  placeholder="Ex: 🎯 Seu compromisso hoje..."
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-fire-gray mb-1">Antecipação do Próximo Dia</label>
+                <textarea
+                  value={day.next_day_teaser || ''}
+                  onChange={(e) => handleDayChange('next_day_teaser', e.target.value)}
+                  rows={3}
+                  className="w-full bg-black/30 border border-white/10 rounded-lg p-3 text-white focus:border-fire-orange outline-none"
+                  placeholder="Ex: ➡️ Amanhã..."
                 />
               </div>
             </div>
