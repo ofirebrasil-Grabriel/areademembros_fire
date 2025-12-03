@@ -6,6 +6,7 @@ import { Session } from '@supabase/supabase-js';
 // Layouts & Pages
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
+import { Payment } from './pages/Payment';
 import { Dashboard } from './pages/Dashboard';
 import { DayView } from './pages/DayView';
 import { Profile } from './pages/Profile';
@@ -69,9 +70,9 @@ const App: React.FC = () => {
   if (loading) return <LoadingScreen />;
 
   // Helper to check if logged in user is admin
-  const isAdmin = session?.user?.email === 'admin@ofire.com.br' || 
-                  session?.user?.app_metadata?.role === 'admin' ||
-                  session?.user?.user_metadata?.role === 'admin';
+  const isAdmin = session?.user?.email === 'admin@ofire.com.br' ||
+    session?.user?.app_metadata?.role === 'admin' ||
+    session?.user?.user_metadata?.role === 'admin';
 
   return (
     <Router>
@@ -80,7 +81,9 @@ const App: React.FC = () => {
         <Route path="/login" element={
           !session ? <Login /> : (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/" />)
         } />
-        
+
+        <Route path="/payment" element={session ? <Payment /> : <Navigate to="/login" />} />
+
         {/* Protected Member Routes */}
         <Route path="/" element={session ? <Layout><Dashboard /></Layout> : <Navigate to="/login" />} />
         <Route path="/day/:id" element={session ? <Layout><DayView /></Layout> : <Navigate to="/login" />} />
@@ -89,7 +92,7 @@ const App: React.FC = () => {
         <Route path="/community" element={session ? <Layout><Community /></Layout> : <Navigate to="/login" />} />
         <Route path="/achievements" element={session ? <Layout><Achievements /></Layout> : <Navigate to="/login" />} />
         <Route path="/day/current" element={session ? <Layout><CurrentDayRedirect /></Layout> : <Navigate to="/login" />} />
-        
+
         {/* Admin Routes */}
         <Route path="/admin" element={session ? <Layout isAdmin><AdminDashboard /></Layout> : <Navigate to="/login" />} />
         <Route path="/admin/settings" element={session ? <Layout isAdmin><AdminSettings /></Layout> : <Navigate to="/login" />} />

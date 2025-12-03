@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { FireLogo } from './Logo';
-import { 
-  LogOut, 
-  LayoutDashboard, 
-  Settings, 
-  Users, 
-  Menu, 
+import {
+  LogOut,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Menu,
   X,
   Flame,
   Award,
@@ -36,7 +36,31 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
     // Standard supabase logout
     await supabase.auth.signOut();
     navigate('/login');
+    await supabase.auth.signOut();
+    navigate('/login');
   };
+
+  // Check Subscription Status
+  React.useEffect(() => {
+    const checkSubscription = async () => {
+      if (isAdmin) return; // Admins bypass
+
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('subscription_status')
+        .eq('id', user.id)
+        .single();
+
+      if (profile && profile.subscription_status !== 'active' && location.pathname !== '/payment') {
+        navigate('/payment');
+      }
+    };
+
+    checkSubscription();
+  }, [location.pathname, isAdmin, navigate]);
 
   const navItems = isAdmin ? [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/admin' },
@@ -56,7 +80,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
   return (
     <div className="min-h-screen bg-fire-dark flex">
       {/* Mobile Menu Button */}
-      <button 
+      <button
         className="lg:hidden fixed top-4 right-4 z-50 p-2 bg-fire-secondary rounded-md text-fire-light"
         onClick={() => setIsSidebarOpen(!isSidebarOpen)}
       >
@@ -84,8 +108,8 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
                   onClick={() => setIsSidebarOpen(false)}
                   className={`
                     flex items-center gap-3 px-4 py-3 rounded-lg transition-colors
-                    ${isActive 
-                      ? 'bg-fire-orange text-white shadow-lg shadow-orange-900/20' 
+                    ${isActive
+                      ? 'bg-fire-orange text-white shadow-lg shadow-orange-900/20'
                       : 'text-fire-gray hover:bg-fire-secondary hover:text-white'}
                   `}
                 >
@@ -111,13 +135,13 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
       {/* Main Content */}
       <main className="flex-1 overflow-x-hidden overflow-y-auto bg-fire-dark relative">
         <div className="container mx-auto px-6 py-8">
-           {children}
+          {children}
         </div>
       </main>
-      
+
       {/* Overlay for mobile */}
       {isSidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
           onClick={() => setIsSidebarOpen(false)}
         />
