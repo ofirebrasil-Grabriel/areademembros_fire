@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { supabase } from './services/supabaseClient';
 import { Session } from '@supabase/supabase-js';
@@ -7,21 +7,24 @@ import { Session } from '@supabase/supabase-js';
 import { Layout } from './components/Layout';
 import { Login } from './pages/Login';
 
-import { Dashboard } from './pages/Dashboard';
-import { DayView } from './pages/DayView';
-import { Profile } from './pages/Profile';
-import { Library } from './pages/Library';
-import { Community } from './pages/Community';
-import { Achievements } from './pages/Achievements';
-import { AdminSettings } from './pages/Admin/AdminSettings';
-import { AdminDashboard } from './pages/Admin/Dashboard';
-import { AdminChallenges } from './pages/Admin/AdminChallenges';
-import { ChallengeEditor } from './pages/Admin/ChallengeEditor';
-import { AdminUsers } from './pages/Admin/AdminUsers';
-import { AdminUserDetail } from './pages/Admin/AdminUserDetail';
-import { AdminLibrary } from './pages/Admin/AdminLibrary';
-import { CurrentDayRedirect } from './components/CurrentDayRedirect';
-import { ChangePassword } from './pages/ChangePassword';
+// Lazy Load Pages
+const Dashboard = React.lazy(() => import('./pages/Dashboard').then(module => ({ default: module.Dashboard })));
+const DayView = React.lazy(() => import('./pages/DayView').then(module => ({ default: module.DayView })));
+const Profile = React.lazy(() => import('./pages/Profile').then(module => ({ default: module.Profile })));
+const Library = React.lazy(() => import('./pages/Library').then(module => ({ default: module.Library })));
+const Community = React.lazy(() => import('./pages/Community').then(module => ({ default: module.Community })));
+const Achievements = React.lazy(() => import('./pages/Achievements').then(module => ({ default: module.Achievements })));
+const CurrentDayRedirect = React.lazy(() => import('./components/CurrentDayRedirect').then(module => ({ default: module.CurrentDayRedirect })));
+const ChangePassword = React.lazy(() => import('./pages/ChangePassword').then(module => ({ default: module.ChangePassword })));
+
+// Admin Pages Lazy Load
+const AdminSettings = React.lazy(() => import('./pages/Admin/AdminSettings').then(module => ({ default: module.AdminSettings })));
+const AdminDashboard = React.lazy(() => import('./pages/Admin/Dashboard').then(module => ({ default: module.AdminDashboard })));
+const AdminChallenges = React.lazy(() => import('./pages/Admin/AdminChallenges').then(module => ({ default: module.AdminChallenges })));
+const ChallengeEditor = React.lazy(() => import('./pages/Admin/ChallengeEditor').then(module => ({ default: module.ChallengeEditor })));
+const AdminUsers = React.lazy(() => import('./pages/Admin/AdminUsers').then(module => ({ default: module.AdminUsers })));
+const AdminUserDetail = React.lazy(() => import('./pages/Admin/AdminUserDetail').then(module => ({ default: module.AdminUserDetail })));
+const AdminLibrary = React.lazy(() => import('./pages/Admin/AdminLibrary').then(module => ({ default: module.AdminLibrary })));
 
 // Loading Component
 const LoadingScreen = () => (
@@ -92,10 +95,6 @@ const App: React.FC = () => {
 
     // 2. Listen for changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      // If the session is the same as what we have (and we aren't loading), skip to avoid loops
-      // But for safety, we just re-run the handler which is cheap enough (profile fetch)
-      // Optimization: If event is TOKEN_REFRESHED, maybe we don't need to fetch profile? 
-      // For now, keep it simple and robust.
       handleSession(session);
     });
 
@@ -114,37 +113,39 @@ const App: React.FC = () => {
 
   return (
     <Router>
-      <Routes>
-        {/* Redirect Logic: If logged in as admin, go to /admin, else go to / */}
-        <Route path="/login" element={
-          !session ? <Login /> : (mustChangePassword ? <Navigate to="/change-password" /> : (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/" />))
-        } />
+      <Suspense fallback={<LoadingScreen />}>
+        <Routes>
+          {/* Redirect Logic: If logged in as admin, go to /admin, else go to / */}
+          <Route path="/login" element={
+            !session ? <Login /> : (mustChangePassword ? <Navigate to="/change-password" /> : (isAdmin ? <Navigate to="/admin" /> : <Navigate to="/" />))
+          } />
 
-        <Route path="/change-password" element={
-          session ? <ChangePassword /> : <Navigate to="/login" />
-        } />
+          <Route path="/change-password" element={
+            session ? <ChangePassword /> : <Navigate to="/login" />
+          } />
 
-        {/* Protected Member Routes */}
-        <Route path="/" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Dashboard /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/day/:id" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><DayView /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/profile" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Profile /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/library" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Library /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/community" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Community /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/achievements" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Achievements /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/day/current" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><CurrentDayRedirect /></Layout>) : <Navigate to="/login" />} />
+          {/* Protected Member Routes */}
+          <Route path="/" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Dashboard /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/day/:id" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><DayView /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/profile" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Profile /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/library" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Library /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/community" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Community /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/achievements" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><Achievements /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/day/current" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><CurrentDayRedirect /></Layout>) : <Navigate to="/login" />} />
 
-        {/* Admin Routes */}
-        <Route path="/admin" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout isAdmin><AdminDashboard /></Layout>) : <Navigate to="/login" />} />
-        <Route path="/admin/settings" element={session ? <Layout isAdmin><AdminSettings /></Layout> : <Navigate to="/login" />} />
-        <Route path="/admin/challenges" element={session ? <Layout isAdmin><AdminChallenges /></Layout> : <Navigate to="/login" />} />
-        <Route path="/admin/challenges/new" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />
-        <Route path="/admin/challenges/edit/:id" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />
-        <Route path="/admin/users" element={session ? <Layout isAdmin><AdminUsers /></Layout> : <Navigate to="/login" />} />
-        <Route path="/admin/users/:id" element={session ? <Layout isAdmin><AdminUserDetail /></Layout> : <Navigate to="/login" />} />
-        <Route path="/admin/library" element={session ? <Layout isAdmin><AdminLibrary /></Layout> : <Navigate to="/login" />} />
+          {/* Admin Routes */}
+          <Route path="/admin" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout isAdmin><AdminDashboard /></Layout>) : <Navigate to="/login" />} />
+          <Route path="/admin/settings" element={session ? <Layout isAdmin><AdminSettings /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin/challenges" element={session ? <Layout isAdmin><AdminChallenges /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin/challenges/new" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin/challenges/edit/:id" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin/users" element={session ? <Layout isAdmin><AdminUsers /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin/users/:id" element={session ? <Layout isAdmin><AdminUserDetail /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin/library" element={session ? <Layout isAdmin><AdminLibrary /></Layout> : <Navigate to="/login" />} />
 
-        <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+          <Route path="*" element={<Navigate to="/" />} />
+        </Routes>
+      </Suspense>
     </Router>
   );
 };
