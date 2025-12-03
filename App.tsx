@@ -26,6 +26,8 @@ const AdminUsers = React.lazy(() => import('./pages/Admin/AdminUsers').then(modu
 const AdminUserDetail = React.lazy(() => import('./pages/Admin/AdminUserDetail').then(module => ({ default: module.AdminUserDetail })));
 const AdminLibrary = React.lazy(() => import('./pages/Admin/AdminLibrary').then(module => ({ default: module.AdminLibrary })));
 
+import { ProtectedRoute } from './components/ProtectedRoute';
+
 // Loading Component
 const LoadingScreen = () => (
   <div className="min-h-screen bg-fire-dark flex flex-col items-center justify-center gap-4">
@@ -134,14 +136,62 @@ const App: React.FC = () => {
           <Route path="/day/current" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout><CurrentDayRedirect /></Layout>) : <Navigate to="/login" />} />
 
           {/* Admin Routes */}
-          <Route path="/admin" element={session ? (mustChangePassword ? <Navigate to="/change-password" /> : <Layout isAdmin><AdminDashboard /></Layout>) : <Navigate to="/login" />} />
-          <Route path="/admin/settings" element={session ? <Layout isAdmin><AdminSettings /></Layout> : <Navigate to="/login" />} />
-          <Route path="/admin/challenges" element={session ? <Layout isAdmin><AdminChallenges /></Layout> : <Navigate to="/login" />} />
-          <Route path="/admin/challenges/new" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />
-          <Route path="/admin/challenges/edit/:id" element={session ? <Layout isAdmin><ChallengeEditor /></Layout> : <Navigate to="/login" />} />
-          <Route path="/admin/users" element={session ? <Layout isAdmin><AdminUsers /></Layout> : <Navigate to="/login" />} />
-          <Route path="/admin/users/:id" element={session ? <Layout isAdmin><AdminUserDetail /></Layout> : <Navigate to="/login" />} />
-          <Route path="/admin/library" element={session ? <Layout isAdmin><AdminLibrary /></Layout> : <Navigate to="/login" />} />
+          <Route path="/admin" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><AdminDashboard /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/settings" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><AdminSettings /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/challenges" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><AdminChallenges /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/challenges/new" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><ChallengeEditor /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/challenges/edit/:id" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><ChallengeEditor /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/users" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><AdminUsers /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/users/:id" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><AdminUserDetail /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
+          <Route path="/admin/library" element={
+            session ? (
+              <ProtectedRoute isAllowed={!!isAdmin}>
+                <Layout isAdmin><AdminLibrary /></Layout>
+              </ProtectedRoute>
+            ) : <Navigate to="/login" />
+          } />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
