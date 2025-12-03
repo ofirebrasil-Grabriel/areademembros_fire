@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { getDays, getUserProgress } from '../services/dataService';
 import { supabase } from '../services/supabaseClient';
-import { Award, Lock, Star, Flame, Target, Zap, ShieldCheck } from 'lucide-react';
+import { Award, Lock, Star, Flame, Target, Zap, ShieldCheck, Briefcase, TrendingUp, Flag, Crown } from 'lucide-react';
 
 interface Badge {
   id: string;
@@ -21,7 +21,7 @@ export const Achievements: React.FC = () => {
     const calculateBadges = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       const userId = user?.id || 'mock-user-id';
-      
+
       const [days, completedTaskIds] = await Promise.all([
         getDays(),
         getUserProgress(userId)
@@ -30,14 +30,14 @@ export const Achievements: React.FC = () => {
       // Calculate Stats
       const tasksCompleted = completedTaskIds.length;
       let daysCompleted = 0;
-      
+
       days.forEach(day => {
-         const dayTaskIds = day.tasks.map(t => t.id);
-         if (dayTaskIds.length > 0 && dayTaskIds.every(id => completedTaskIds.includes(id))) {
-           daysCompleted++;
-         }
+        const dayTaskIds = day.tasks.map(t => t.id);
+        if (dayTaskIds.length > 0 && dayTaskIds.every(id => completedTaskIds.includes(id))) {
+          daysCompleted++;
+        }
       });
-      
+
       setStats({ daysCompleted, tasksCompleted });
 
       // Define Badges Logic
@@ -59,6 +59,14 @@ export const Achievements: React.FC = () => {
           requirement: '5 Tarefas'
         },
         {
+          id: 'executor',
+          title: 'Executor',
+          description: 'Completou 10 tarefas.',
+          icon: <Briefcase size={32} />,
+          unlocked: tasksCompleted >= 10,
+          requirement: '10 Tarefas'
+        },
+        {
           id: 'momentum',
           title: 'Pegando Ritmo',
           description: 'Completou 3 dias consecutivos.',
@@ -73,6 +81,30 @@ export const Achievements: React.FC = () => {
           icon: <ShieldCheck size={32} />,
           unlocked: daysCompleted >= 7,
           requirement: 'Completar 7 Dias'
+        },
+        {
+          id: 'imparavel',
+          title: 'Imparável',
+          description: 'Completou 25 tarefas.',
+          icon: <TrendingUp size={32} />,
+          unlocked: tasksCompleted >= 25,
+          requirement: '25 Tarefas'
+        },
+        {
+          id: 'reta_final',
+          title: 'Reta Final',
+          description: 'Completou 12 dias do desafio.',
+          icon: <Flag size={32} />,
+          unlocked: daysCompleted >= 12,
+          requirement: 'Completar 12 Dias'
+        },
+        {
+          id: 'lenda_desafio',
+          title: 'Lenda do Desafio',
+          description: 'Completou 40 tarefas.',
+          icon: <Crown size={32} />,
+          unlocked: tasksCompleted >= 40,
+          requirement: '40 Tarefas'
         },
         {
           id: 'fire_master',
@@ -98,27 +130,27 @@ export const Achievements: React.FC = () => {
       <div className="text-center mb-12">
         <h1 className="text-3xl font-bold text-white font-montserrat mb-2">Suas Conquistas</h1>
         <p className="text-fire-gray">Desbloqueie medalhas à medida que avança na sua jornada financeira.</p>
-        
+
         <div className="flex justify-center gap-8 mt-8">
-           <div className="text-center">
-             <div className="text-3xl font-bold text-fire-orange">{stats.daysCompleted}</div>
-             <div className="text-xs text-fire-gray uppercase tracking-widest">Dias Completos</div>
-           </div>
-           <div className="text-center">
-             <div className="text-3xl font-bold text-blue-400">{stats.tasksCompleted}</div>
-             <div className="text-xs text-fire-gray uppercase tracking-widest">Tarefas Feitas</div>
-           </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-fire-orange">{stats.daysCompleted}</div>
+            <div className="text-xs text-fire-gray uppercase tracking-widest">Dias Completos</div>
+          </div>
+          <div className="text-center">
+            <div className="text-3xl font-bold text-blue-400">{stats.tasksCompleted}</div>
+            <div className="text-xs text-fire-gray uppercase tracking-widest">Tarefas Feitas</div>
+          </div>
         </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {badges.map((badge) => (
-          <div 
+          <div
             key={badge.id}
             className={`
               relative p-6 rounded-2xl border transition-all duration-300
-              ${badge.unlocked 
-                ? 'bg-fire-secondary/40 border-fire-orange/30 shadow-[0_0_20px_rgba(255,102,0,0.1)]' 
+              ${badge.unlocked
+                ? 'bg-fire-secondary/40 border-fire-orange/30 shadow-[0_0_20px_rgba(255,102,0,0.1)]'
                 : 'bg-white/5 border-transparent opacity-60 grayscale'}
             `}
           >
@@ -128,23 +160,23 @@ export const Achievements: React.FC = () => {
             `}>
               {badge.unlocked ? badge.icon : <Lock size={24} />}
             </div>
-            
+
             <div className="text-center">
               <h3 className={`text-lg font-bold mb-2 ${badge.unlocked ? 'text-white' : 'text-fire-gray'}`}>
                 {badge.title}
               </h3>
               <p className="text-sm text-fire-gray mb-4 min-h-[40px]">{badge.description}</p>
-              
+
               {!badge.unlocked && (
                 <div className="text-xs font-bold text-fire-gray/50 uppercase tracking-widest border-t border-white/5 pt-2">
                   Requer: {badge.requirement}
                 </div>
               )}
-              
+
               {badge.unlocked && (
-                 <div className="text-xs font-bold text-green-400 uppercase tracking-widest border-t border-white/5 pt-2 flex items-center justify-center gap-1">
-                   <Award size={12} /> Desbloqueado
-                 </div>
+                <div className="text-xs font-bold text-green-400 uppercase tracking-widest border-t border-white/5 pt-2 flex items-center justify-center gap-1">
+                  <Award size={12} /> Desbloqueado
+                </div>
               )}
             </div>
           </div>

@@ -54,7 +54,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
     { icon: LayoutDashboard, label: 'Painel', path: '/' },
     { icon: Flame, label: 'Desafio Atual', path: '/day/current' },
     { icon: Library, label: 'Biblioteca', path: '/library' },
-    { icon: MessageSquare, label: 'Comunidade', path: '/community' },
+    // { icon: MessageSquare, label: 'Comunidade', path: '/community' },
     { icon: Award, label: 'Conquistas', path: '/achievements' },
     { icon: UserCircle, label: 'Minha Conta', path: '/profile' },
   ];
@@ -77,7 +77,7 @@ export const Layout: React.FC<{ children: React.ReactNode; isAdmin?: boolean }> 
       `}>
         <div className="h-full flex flex-col">
           <div className="p-8 flex items-center justify-center border-b border-fire-secondary/50">
-            <FireLogo />
+            <img src="/logo.svg" alt="FIRE Logo" className="h-12 w-auto" />
           </div>
 
           <nav className="flex-1 px-4 py-8 space-y-2 overflow-y-auto custom-scrollbar">

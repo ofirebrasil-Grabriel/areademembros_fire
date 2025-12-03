@@ -77,7 +77,7 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md bg-fire-secondary/30 backdrop-blur-lg border border-white/5 p-8 rounded-2xl shadow-2xl">
         <div className="flex justify-center mb-8">
-          <FireLogo className="scale-125" />
+          <img src="/logo.svg" alt="FIRE Logo" className="h-16 w-auto" />
         </div>
 
         <h2 className="text-2xl font-bold text-center mb-2 text-white font-montserrat">

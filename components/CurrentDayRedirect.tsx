@@ -25,26 +25,36 @@ export const CurrentDayRedirect: React.FC = () => {
         }
 
         // Logic to find current day:
-        // Iterate through days, check if prev day is fully complete.
-        // The first day that is NOT fully complete, or the last day if all are complete.
+        // The current challenge is always the next one after the last one that was 100% completed.
+        // If it is already released (which is implied by the sequence), go to it.
+        // If not (e.g. end of list), stay on the last released one.
 
-        let targetDayNumber = 1;
+        let lastCompletedDayNumber = 0;
 
-        for (let i = 0; i < days.length; i++) {
-          const day = days[i];
+        for (const day of days) {
           const dayTaskIds = day.tasks.map(t => t.id);
 
-          if (dayTaskIds.length === 0) continue;
+          // Treat days with 0 tasks as automatically complete for progression purposes
+          const isDayComplete = dayTaskIds.length === 0 || dayTaskIds.every(id => completedTasks.includes(id));
 
-          const isDayComplete = dayTaskIds.every(id => completedTasks.includes(id));
-
-          if (!isDayComplete) {
-            targetDayNumber = day.day_number;
+          if (isDayComplete) {
+            lastCompletedDayNumber = day.day_number;
+          } else {
+            // Found the first incomplete day.
+            // This is our target, IF it exists (which it does, since we are iterating).
             break;
-          } else if (i === days.length - 1) {
-            // Last day is also complete
-            targetDayNumber = day.day_number;
           }
+        }
+
+        // Target is the next day after the last completed one.
+        let targetDayNumber = lastCompletedDayNumber + 1;
+
+        // Check if target day exists in our list
+        const targetDayExists = days.some(d => d.day_number === targetDayNumber);
+
+        if (!targetDayExists) {
+          // If next day doesn't exist (we finished everything), stay on the last completed day.
+          targetDayNumber = Math.max(1, lastCompletedDayNumber);
         }
 
         navigate(`/day/${targetDayNumber}`);

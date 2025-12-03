@@ -545,8 +545,14 @@ export const DayView: React.FC = () => {
             </h2>
 
             {day.commitment_text && (
-              <div className="max-w-2xl text-center whitespace-pre-wrap text-white/80 leading-relaxed italic border-l-4 border-fire-orange/30 pl-4">
-                {day.commitment_text}
+              <div className="max-w-4xl w-full bg-gradient-to-br from-fire-secondary/20 to-fire-secondary/5 border border-white/5 rounded-2xl p-8 md:p-10 relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1.5 h-full bg-fire-orange group-hover:w-2 transition-all duration-300"></div>
+                <div className="absolute -right-6 -bottom-6 text-white/5 transform rotate-12">
+                  <Handshake size={120} />
+                </div>
+                <p className="text-lg md:text-xl text-white/90 leading-relaxed italic whitespace-pre-line text-center md:text-left relative z-10 font-medium">
+                  "{day.commitment_text}"
+                </p>
               </div>
             )}
 
