@@ -59,21 +59,21 @@ serve(async (req: Request) => {
 
         console.log(`Processing webhook event: ${event} for Product ID: ${productId}`);
 
-        // 1.1 Check Product ID (Optional but recommended)
-        const { data: productConfig } = await supabaseAdmin
-            .from("app_config")
-            .select("value")
-            .eq("key", "hotmart_product_id")
-            .single();
+        // 1.1 Check Product ID (REMOVED: User wants to accept all products)
+        // const { data: productConfig } = await supabaseAdmin
+        //     .from("app_config")
+        //     .select("value")
+        //     .eq("key", "hotmart_product_id")
+        //     .single();
 
-        const allowedProductId = productConfig?.value;
+        // const allowedProductId = productConfig?.value;
 
-        if (allowedProductId && productId && String(productId) !== String(allowedProductId)) {
-            console.log(`Ignored event for product ${productId} (Expected: ${allowedProductId})`);
-            return new Response(JSON.stringify({ message: "Ignored: Product ID mismatch" }), {
-                headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-        }
+        // if (allowedProductId && productId && String(productId) !== String(allowedProductId)) {
+        //     console.log(`Ignored event for product ${productId} (Expected: ${allowedProductId})`);
+        //     return new Response(JSON.stringify({ message: "Ignored: Product ID mismatch" }), {
+        //         headers: { ...corsHeaders, "Content-Type": "application/json" },
+        //     });
+        // }
 
         // Accept PURCHASE_APPROVED, APPROVED, SWITCH_PLAN, and PURCHASE_COMPLETE
         if (event === "PURCHASE_APPROVED" || event === "APPROVED" || event === "SWITCH_PLAN" || event === "PURCHASE_COMPLETE") {
@@ -90,10 +90,22 @@ serve(async (req: Request) => {
                 .eq("email", email)
                 .single();
 
+            // 1.2 Find Lead (to link Profile and Track Event)
+            const { data: lead } = await supabaseAdmin
+                .from("leads")
+                .select("id")
+                .eq("email", email)
+                .single();
+
+            const leadId = lead?.id || null;
+
             if (existingProfile) {
                 await supabaseAdmin
                     .from("profiles")
-                    .update({ status: "ACTIVE" })
+                    .update({
+                        status: "ACTIVE",
+                        lead_id: leadId // Link to Lead
+                    })
                     .eq("id", existingProfile.id);
 
                 console.log(`Updated status to ACTIVE for existing user (ID: ${existingProfile.id})`);
@@ -115,7 +127,8 @@ serve(async (req: Request) => {
                         .from("profiles")
                         .update({
                             status: "ACTIVE",
-                            must_change_password: true
+                            must_change_password: true,
+                            lead_id: leadId // Link to Lead
                         })
                         .eq("id", newUser.user.id);
 
@@ -149,6 +162,22 @@ serve(async (req: Request) => {
                         } catch (n8nError) {
                             console.error("Error sending n8n notification:", n8nError);
                         }
+                    }
+
+                    // 4. Track Purchase Event (Intelligence)
+                    if (leadId) {
+                        await supabaseAdmin.from("eventos_tracking").insert({
+                            lead_id: leadId,
+                            event_name: "Compra Realizada",
+                            event_data: {
+                                product_id: productId,
+                                provider: "hotmart",
+                                price: body.price || body.data?.purchase?.price?.value,
+                                currency: body.currency || body.data?.purchase?.price?.currency_code
+                            },
+                            context_id: "desafio-fire-15d"
+                        });
+                        console.log(`Tracked purchase event for Lead ID: ${leadId}`);
                     }
                 }
             }
