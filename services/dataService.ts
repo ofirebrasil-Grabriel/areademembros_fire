@@ -636,3 +636,19 @@ export const getRecentActivity = async () => {
     return [];
   }
 };
+
+export const getWebhookLogs = async () => {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) throw new Error("No session");
+
+  const { data, error } = await supabase.functions.invoke('admin-actions', {
+    body: { action: 'getWebhookLogs' }
+  });
+
+  if (error) {
+    console.error("Error fetching webhook logs:", error);
+    return [];
+  }
+
+  return data.logs || [];
+};

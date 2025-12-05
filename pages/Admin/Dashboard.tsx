@@ -1,26 +1,29 @@
 import React, { useEffect, useState } from 'react';
 import { Users, DollarSign, Activity, TrendingUp, ArrowRight, Loader2, FileText, BarChart3, Clock, CheckCircle } from 'lucide-react';
-import { getDashboardStats, getRecentActivity, getEngagementStats } from '../../services/dataService';
+import { getDashboardStats, getRecentActivity, getEngagementStats, getWebhookLogs } from '../../services/dataService';
 import { DashboardStats } from '../../types';
 import { useNavigate } from 'react-router-dom';
 
 export const AdminDashboard: React.FC = () => {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [activity, setActivity] = useState<any[]>([]);
+  const [webhookLogs, setWebhookLogs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const [engagementStats, setEngagementStats] = useState<{ date: string; count: number }[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
-      const [statsData, activityData, engagementData] = await Promise.all([
+      const [statsData, activityData, engagementData, logsData] = await Promise.all([
         getDashboardStats(),
         getRecentActivity(),
-        getEngagementStats()
+        getEngagementStats(),
+        getWebhookLogs()
       ]);
       setStats(statsData);
       setActivity(activityData);
       setEngagementStats(engagementData);
+      setWebhookLogs(logsData);
       setLoading(false);
     };
     fetchData();
@@ -134,42 +137,90 @@ export const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-fire-secondary/20 border border-white/5 rounded-xl p-6">
-        <h2 className="text-xl font-bold text-white font-montserrat mb-4">Atividade Recente</h2>
-        {activity.length > 0 ? (
-          <div className="space-y-4">
-            {activity.map((item, i) => (
-              <div key={item.id || i} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0 hover:bg-white/5 p-2 rounded transition-colors">
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-fire-orange/20 flex items-center justify-center text-fire-orange text-xs font-bold border border-fire-orange/20">
-                    {item.user_name.charAt(0).toUpperCase()}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div className="bg-fire-secondary/20 border border-white/5 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-white font-montserrat mb-4">Atividade Recente</h2>
+          {activity.length > 0 ? (
+            <div className="space-y-4">
+              {activity.map((item, i) => (
+                <div key={item.id || i} className="flex items-center justify-between border-b border-white/5 pb-3 last:border-0 last:pb-0 hover:bg-white/5 p-2 rounded transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-fire-orange/20 flex items-center justify-center text-fire-orange text-xs font-bold border border-fire-orange/20">
+                      {item.user_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div>
+                      <p className="text-sm text-white">
+                        <span className="font-bold">{item.user_name}</span> completou tarefa:
+                      </p>
+                      <p className="text-xs text-fire-gray">
+                        Dia {item.day_number} - {item.task_title}
+                      </p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="text-sm text-white">
-                      <span className="font-bold">{item.user_name}</span> completou tarefa:
-                    </p>
-                    <p className="text-xs text-fire-gray">
-                      Dia {item.day_number} - {item.task_title}
-                    </p>
+                  <div className="text-right">
+                    <div className="text-xs text-fire-gray flex items-center gap-1 justify-end">
+                      <Clock size={12} />
+                      {new Date(item.completed_at).toLocaleDateString('pt-BR')}
+                    </div>
+                    <div className="text-[10px] text-fire-gray/60">
+                      {new Date(item.completed_at).toLocaleTimeString('pt-BR')}
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-xs text-fire-gray flex items-center gap-1 justify-end">
-                    <Clock size={12} />
-                    {new Date(item.completed_at).toLocaleDateString('pt-BR')}
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-fire-gray">
+              <p>Nenhuma atividade recente registrada.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Webhook Logs */}
+        <div className="bg-fire-secondary/20 border border-white/5 rounded-xl p-6">
+          <h2 className="text-xl font-bold text-white font-montserrat mb-4 flex items-center gap-2">
+            <Activity size={20} className="text-blue-400" />
+            Logs de Integração (Hotmart)
+          </h2>
+          <div className="space-y-2 overflow-y-auto max-h-[400px] pr-2">
+            {webhookLogs.length > 0 ? (
+              webhookLogs.map((log, i) => {
+                const payload = typeof log.payload === 'string' ? JSON.parse(log.payload) : log.payload;
+                const event = payload.event || payload.status || 'UNKNOWN';
+                const email = payload.email || payload.data?.buyer?.email || 'No Email';
+                const prodId = payload.prod || payload.data?.product?.id || 'N/A';
+
+                return (
+                  <div key={i} className="bg-white/5 p-3 rounded-lg border border-white/5 text-xs">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className={`font-bold px-2 py-0.5 rounded ${['PURCHASE_APPROVED', 'APPROVED', 'COMPLETED'].includes(event) ? 'bg-green-500/20 text-green-400' :
+                        ['CANCELED', 'REFUNDED', 'CHARGEBACK'].includes(event) ? 'bg-red-500/20 text-red-400' :
+                          'bg-blue-500/20 text-blue-400'
+                        }`}>
+                        {event}
+                      </span>
+                      <span className="text-fire-gray">{new Date(log.created_at).toLocaleString('pt-BR')}</span>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 mt-2">
+                      <div>
+                        <span className="text-fire-gray block text-[10px] uppercase">Email</span>
+                        <span className="text-white truncate block" title={email}>{email}</span>
+                      </div>
+                      <div>
+                        <span className="text-fire-gray block text-[10px] uppercase">Produto ID</span>
+                        <span className="text-white font-mono">{prodId}</span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-[10px] text-fire-gray/60">
-                    {new Date(item.completed_at).toLocaleTimeString('pt-BR')}
-                  </div>
-                </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8 text-fire-gray">
+                <p>Nenhum log de webhook encontrado.</p>
               </div>
-            ))}
+            )}
           </div>
-        ) : (
-          <div className="text-center py-8 text-fire-gray">
-            <p>Nenhuma atividade recente registrada.</p>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

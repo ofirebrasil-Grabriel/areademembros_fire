@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -6,7 +7,7 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
@@ -26,8 +27,8 @@ serve(async (req) => {
             payload: body
         });
 
-        // Hotmart sends the token in the header 'h-hotmart-hook-token' or sometimes in the body
-        const tokenHeader = req.headers.get("h-hotmart-hook-token");
+        // Hotmart sends the token in the header 'X-HOTMART-HOTTOK' (or legacy 'h-hotmart-hook-token') or in the body
+        const tokenHeader = req.headers.get("X-HOTMART-HOTTOK") || req.headers.get("h-hotmart-hook-token");
         const tokenBody = body.hottok;
         const receivedToken = tokenHeader || tokenBody;
 
@@ -41,7 +42,7 @@ serve(async (req) => {
         const configuredToken = configData?.value;
 
         if (configuredToken && receivedToken !== configuredToken) {
-            console.error("Invalid Hotmart Token");
+            console.error(`Invalid Hotmart Token. Expected: ${configuredToken.substring(0, 5)}... Received: ${receivedToken ? receivedToken.substring(0, 5) + '...' : 'null'}`);
             // We continue for debugging purposes if token is missing, but in prod we should throw
             // throw new Error("Invalid Hotmart Token");
         }
@@ -51,9 +52,28 @@ serve(async (req) => {
         // Normalize email to lowercase to ensure matching works
         const rawEmail = body.email || body.data?.buyer?.email;
         const email = rawEmail ? rawEmail.toLowerCase() : null;
-        const name = body.name || body.data?.buyer?.name || "Novo Aluno";
 
-        console.log(`Processing webhook event: ${event}`);
+
+        const name = body.name || body.data?.buyer?.name || "Novo Aluno";
+        const productId = body.prod || body.data?.product?.id;
+
+        console.log(`Processing webhook event: ${event} for Product ID: ${productId}`);
+
+        // 1.1 Check Product ID (Optional but recommended)
+        const { data: productConfig } = await supabaseAdmin
+            .from("app_config")
+            .select("value")
+            .eq("key", "hotmart_product_id")
+            .single();
+
+        const allowedProductId = productConfig?.value;
+
+        if (allowedProductId && productId && String(productId) !== String(allowedProductId)) {
+            console.log(`Ignored event for product ${productId} (Expected: ${allowedProductId})`);
+            return new Response(JSON.stringify({ message: "Ignored: Product ID mismatch" }), {
+                headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+        }
 
         // Accept PURCHASE_APPROVED, APPROVED, SWITCH_PLAN, and PURCHASE_COMPLETE
         if (event === "PURCHASE_APPROVED" || event === "APPROVED" || event === "SWITCH_PLAN" || event === "PURCHASE_COMPLETE") {
@@ -120,7 +140,9 @@ serve(async (req) => {
                                     email: email,
                                     password: randomPassword,
                                     name: name,
-                                    event: "USER_CREATED"
+                                    event: "USER_CREATED",
+                                    phone: body.data?.buyer?.phone || body.phone_number || null,
+                                    phone_local_code: body.data?.buyer?.phone_local_code || body.phone_local_code || null
                                 })
                             });
                             console.log(`Sent n8n notification`);
@@ -167,7 +189,7 @@ serve(async (req) => {
             headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
 
-    } catch (error) {
+    } catch (error: any) {
         console.error(error);
         return new Response(
             JSON.stringify({ error: error.message }),

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -73,7 +74,8 @@ serve(async (req) => {
                         email: email,
                         password: newPassword,
                         name: user.user_metadata?.full_name || "Usuário",
-                        event: "PASSWORD_RESET"
+                        event: "PASSWORD_RESET",
+                        phone: user.phone || user.user_metadata?.phone || null
                     })
                 });
                 console.log(`Sent n8n recovery notification to ${n8nConfig.value}`);

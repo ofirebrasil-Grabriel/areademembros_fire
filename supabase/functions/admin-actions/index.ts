@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -83,7 +84,7 @@ serve(async (req: Request) => {
                 .from('webhook_events')
                 .select('*')
                 .order('created_at', { ascending: false })
-                .limit(10);
+                .limit(20);
 
             if (error) throw error;
 
@@ -91,6 +92,8 @@ serve(async (req: Request) => {
                 headers: { ...corsHeaders, "Content-Type": "application/json" },
             });
         }
+
+
 
         if (action === 'createUser') {
             const { email, password, name, role, phone } = body;
