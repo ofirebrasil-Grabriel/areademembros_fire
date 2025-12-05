@@ -6,7 +6,7 @@ const corsHeaders = {
     "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-serve(async (req) => {
+serve(async (req: Request) => {
     if (req.method === "OPTIONS") {
         return new Response("ok", { headers: corsHeaders });
     }
@@ -169,8 +169,8 @@ serve(async (req) => {
 
         throw new Error("Invalid action");
 
-    } catch (error) {
-        console.error("Global Error:", error);
+    } catch (error: any) {
+        console.error(error);
         return new Response(
             JSON.stringify({ error: error.message }),
             { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 }
