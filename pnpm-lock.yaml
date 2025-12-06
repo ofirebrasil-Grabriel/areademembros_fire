@@ -8,9 +8,6 @@ importers:
 
   .:
     dependencies:
-      '@supabase/supabase-js':
-        specifier: ^2.86.0
-        version: 2.86.0
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.0)
@@ -27,6 +24,9 @@ importers:
       '@playwright/test':
         specifier: ^1.57.0
         version: 1.57.0
+      '@supabase/supabase-js':
+        specifier: ^2.86.0
+        version: 2.86.0
       '@types/node':
         specifier: ^22.14.0
         version: 22.19.1
