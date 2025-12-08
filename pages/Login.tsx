@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../services/supabaseClient';
 import { Button } from '../components/Button';
 import { Mail, Lock, Loader2 } from 'lucide-react';
+import Logo from '@/assets/logo.svg';
 
 export const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -83,7 +84,7 @@ export const Login: React.FC = () => {
 
       <div className="w-full max-w-md bg-fire-secondary/30 backdrop-blur-lg border border-white/5 p-8 rounded-2xl shadow-2xl">
         <div className="flex justify-center mb-8">
-          <img src="/logo.svg" alt="FIRE Logo" className="h-16 w-auto" width="88" height="64" />
+          <img src={Logo} alt="FIRE Logo" className="h-16 w-auto" width="88" height="64" />
         </div>
 
         <h2 className="text-2xl font-bold text-center mb-2 text-white font-montserrat">
